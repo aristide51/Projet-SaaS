@@ -36,8 +36,18 @@ Le logger central n’écrit que le niveau et un nom d’événement contrôlé 
 
 Les frontières d’erreur affichent un message français générique et proposent une nouvelle tentative ; elles ne révèlent pas le détail interne au navigateur.
 
+## Réauthentification des actions sensibles
+
+Avant une action sensible, le serveur exige une réauthentification datant de moins de 10 minutes. Le composant `ReauthGate` permet de confirmer le mot de passe actuel sans remplacer la session Supabase, ou d’envoyer un nouveau lien magique à l’adresse déjà vérifiée. Le callback n’émet la preuve que pour un lien explicitement créé pour la réauthentification.
+
+La preuve est un cookie `HttpOnly`, `SameSite=Lax`, signé par HMAC-SHA-256, lié à l’identifiant du compte et expirant après 10 minutes. `REAUTH_COOKIE_SECRET` est un secret serveur d’au moins 32 caractères, distinct des clés Supabase ; générer une valeur aléatoire pour chaque environnement et ne jamais la versionner. Toute action sensible doit appeler `hasRecentReauthentication(user.id)` côté serveur avant sa mutation, même si son interface est protégée par `ReauthGate`. La demande de suppression de compte et la réinitialisation du mot de passe le font déjà. Les changements d’adresse e-mail et de clés de paiement devront appliquer le même contrôle lorsqu’ils seront ajoutés.
+
+## Carte de mise en route
+
+Le sélecteur de lieu charge à la demande les tuiles OpenStreetMap via `tile.openstreetmap.org`, avec l’attribution requise. L’adresse saisie n’est pas envoyée à un service de géocodage ; la carte ne reçoit que les coordonnées choisies. Informer les commerçants que leur navigateur contacte le fournisseur de tuiles et que son adresse IP peut lui être visible. Pour le support, renseigner `NEXT_PUBLIC_SUPPORT_WHATSAPP` (format international) et `NEXT_PUBLIC_SUPPORT_EMAIL` dans chaque environnement ; ne pas mettre d’informations client dans les messages d’aide au-delà de l’identifiant boutique et de l’étape.
+
 ## Vérifications
 
-- `pnpm test` vérifie le contrôle d’origine et le helper Turnstile.
+- `pnpm test` vérifie le contrôle d’origine, le helper Turnstile et l’expiration/tampering de la preuve de réauthentification.
 - `pnpm test:e2e` vérifie les en-têtes CSP, la route `/api/health` et le rejet d’une origine étrangère.
 - `pnpm build` vérifie la compilation de production.

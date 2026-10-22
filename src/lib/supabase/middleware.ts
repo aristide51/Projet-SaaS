@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { validateServerEnv } from "@/lib/env";
 import { getProtectedArea, getSafeRedirectPath } from "@/lib/auth/redirect";
+import { getRequestOrigin } from "@/lib/security/origin";
 import type { Database } from "@/types/database";
 
 export async function updateSession(
@@ -84,7 +85,7 @@ export async function updateSession(
         `${request.nextUrl.pathname}${request.nextUrl.search}`,
       ),
     );
-    return redirectWithCookies(redirectUrl, response);
+    return redirectWithCookies(redirectUrl, response, request);
   }
 
   if (protectedArea === "admin") {
@@ -104,6 +105,7 @@ export async function updateSession(
       return redirectWithCookies(
         new URL("/account?error=access-denied", request.url),
         response,
+        request,
       );
     }
   }
@@ -111,8 +113,15 @@ export async function updateSession(
   return response;
 }
 
-function redirectWithCookies(url: URL, response: NextResponse) {
-  const redirectResponse = NextResponse.redirect(url);
+function redirectWithCookies(
+  url: URL,
+  response: NextResponse,
+  request: NextRequest,
+) {
+  const origin = getRequestOrigin(request) ?? url.origin;
+  const redirectResponse = NextResponse.redirect(
+    new URL(`${url.pathname}${url.search}${url.hash}`, origin),
+  );
 
   response.cookies.getAll().forEach((cookie) => {
     redirectResponse.cookies.set(cookie);

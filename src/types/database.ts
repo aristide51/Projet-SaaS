@@ -9,6 +9,31 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      account_deletion_requests: {
+        Row: {
+          id: string;
+          processed_at: string | null;
+          requested_at: string;
+          status: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          id?: string;
+          processed_at?: string | null;
+          requested_at?: string;
+          status?: string;
+          user_id: string;
+        };
+        Update: {
+          id?: string;
+          processed_at?: string | null;
+          requested_at?: string;
+          status?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       audit_log: {
         Row: {
           action: string;
@@ -1544,6 +1569,15 @@ export type Database = {
         };
         Returns: string;
       };
+      catalog_product_limit: { Args: { p_shop: string }; Returns: number };
+      catalog_trash_product_ids: {
+        Args: { p_shop: string };
+        Returns: string[];
+      };
+      catalog_trash_service_ids: {
+        Args: { p_shop: string };
+        Returns: string[];
+      };
       create_order_from_cart: {
         Args: {
           p_cart_id: string;
@@ -1564,6 +1598,10 @@ export type Database = {
         };
         Returns: string;
       };
+      delete_catalog_variant: {
+        Args: { p_product: string; p_shop: string; p_variant_id: string };
+        Returns: undefined;
+      };
       expire_pending_orders: {
         Args: Record<PropertyKey, never>;
         Returns: number;
@@ -1583,11 +1621,43 @@ export type Database = {
         Args: { p_approve: boolean; p_reason?: string; p_shop: string };
         Returns: undefined;
       };
+      save_catalog_product: {
+        Args: { p_product: Json; p_shop: string };
+        Returns: string;
+      };
+      save_catalog_service: {
+        Args: { p_service: Json; p_shop: string };
+        Returns: string;
+      };
+      save_catalog_variant: {
+        Args: {
+          p_name: string;
+          p_price: number;
+          p_product: string;
+          p_shop: string;
+          p_stock: number;
+          p_variant_id: string;
+        };
+        Returns: string;
+      };
+      search_catalog_products: {
+        Args: { p_query: string; p_shop: string };
+        Returns: string[];
+      };
       set_booking_status: {
         Args: {
           p_booking_id: string;
           p_reason?: string;
           p_to: Database["public"]["Enums"]["booking_status"];
+        };
+        Returns: undefined;
+      };
+      set_catalog_item_deleted: {
+        Args: {
+          p_deleted: boolean;
+          p_item_id: string;
+          p_kind: string;
+          p_shop: string;
         };
         Returns: undefined;
       };

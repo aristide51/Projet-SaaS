@@ -1,11 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { signOut } from "@/features/auth/actions";
 
 export function SignOutButton() {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
 
@@ -19,8 +17,7 @@ export function SignOutButton() {
         return;
       }
 
-      router.replace(result.redirectTo ?? "/auth/login");
-      router.refresh();
+      window.location.assign(result.redirectTo ?? "/auth/login");
     });
   }
 

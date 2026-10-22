@@ -21,12 +21,16 @@ describe("validateServerEnv", () => {
         NEXT_PUBLIC_SUPABASE_ANON_KEY: "public-anon-key",
         NEXT_PUBLIC_SENTRY_DSN: "",
         TURNSTILE_SECRET_KEY: "",
+        NEXT_PUBLIC_SUPPORT_WHATSAPP: "+22670000000",
+        NEXT_PUBLIC_SUPPORT_EMAIL: "aide@example.test",
       }),
     ).toMatchObject({
       NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "public-anon-key",
       NEXT_PUBLIC_SENTRY_DSN: "",
       TURNSTILE_SECRET_KEY: "",
+      NEXT_PUBLIC_SUPPORT_WHATSAPP: "+22670000000",
+      NEXT_PUBLIC_SUPPORT_EMAIL: "aide@example.test",
     });
   });
 

@@ -108,21 +108,67 @@ select tests.as_user('a0000000-0000-0000-0000-000000000006');
 select throws_ok($$update public.profiles set role_global = 'admin' where id = 'a0000000-0000-0000-0000-000000000006'$$, '42501', null, 'un client ne peut pas se donner le role admin');
 select is((select count(*) from public.profiles), 1::bigint, 'un client ne voit que son propre profil');
 select lives_ok($$update public.profiles set phone = '+22670000006' where id = 'a0000000-0000-0000-0000-000000000006'$$, 'un client modifie son telephone');
+select lives_ok($$update public.profiles set full_name = 'Awa Test', avatar_url = 'https://example.test/avatar.webp' where id = 'a0000000-0000-0000-0000-000000000006'$$, 'un client modifie son nom et son avatar');
+select throws_ok($$update public.profiles set phone = '+33123456789' where id = 'a0000000-0000-0000-0000-000000000006'$$, '23514', null, 'un numero hors format burkinabe est refuse');
+select lives_ok($$update public.profiles set full_name = 'Awa Ouedraogo', avatar_url = null where id = 'a0000000-0000-0000-0000-000000000006'$$, 'les donnees de profil de test sont restaurees');
+select lives_ok($$insert into public.account_deletion_requests (user_id) values ('a0000000-0000-0000-0000-000000000006')$$, 'un client enregistre sa demande de suppression');
+select is((select count(*) from public.account_deletion_requests), 1::bigint, 'le client voit sa demande de suppression');
+select throws_ok($$insert into public.account_deletion_requests (user_id) values ('a0000000-0000-0000-0000-000000000007')$$, '42501', null, 'un client ne peut pas enregistrer une demande pour un autre compte');
+select throws_ok($$update public.account_deletion_requests set status = 'completed' where user_id = 'a0000000-0000-0000-0000-000000000006'$$, '42501', null, 'un client ne peut pas traiter sa demande');
+select throws_ok($$delete from public.account_deletion_requests where user_id = 'a0000000-0000-0000-0000-000000000006'$$, '42501', null, 'un client ne peut pas effacer sa demande');
+select tests.as_user('a0000000-0000-0000-0000-000000000007');
+select is((select count(*) from public.account_deletion_requests), 0::bigint, 'un autre client ne voit pas la demande');
 
 -- =====================================================================
 -- C. Creation de boutique et limites du plan gratuit
 -- =====================================================================
+select tests.as_user('a0000000-0000-0000-0000-000000000006');
 select lives_ok($$insert into public.shops (created_by, slug, name) values ('a0000000-0000-0000-0000-000000000006', 'boutique-awa', 'Boutique Awa')$$, 'un client cree une boutique');
 select is((select count(*) from public.shop_members where role = 'owner' and user_id = 'a0000000-0000-0000-0000-000000000006'), 1::bigint, 'le createur devient proprietaire');
 select is((select p.code from public.subscriptions s join public.plans p on p.id = s.plan_id where s.shop_id = (select id from public.shops where slug = 'boutique-awa')), 'free', 'plan gratuit attribue');
 select throws_ok($$insert into public.shops (created_by, slug, name) values ('a0000000-0000-0000-0000-000000000002', 'usurpation', 'Usurpation')$$, '42501', null, 'on ne peut pas creer une boutique au nom d''un autre');
 select throws_ok($$update public.shops set review_status = 'approved' where slug = 'boutique-awa'$$, '42501', null, 'le proprietaire ne peut pas s''auto-approuver');
 select throws_ok($$update public.shops set rating_avg = 5 where slug = 'boutique-awa'$$, '42501', null, 'la note ne se modifie pas a la main');
-select lives_ok($$insert into public.products (shop_id, name, price) select (select id from public.shops where slug = 'boutique-awa'), 'P' || g, 1000 from generate_series(1, 15) g$$, '15 produits autorises en plan gratuit');
-select throws_like($$insert into public.products (shop_id, name, price) values ((select id from public.shops where slug = 'boutique-awa'), 'P16', 1000)$$, 'plan_limit_products%', 'le 16e produit est refuse en plan gratuit');
-select throws_ok($$insert into public.products (shop_id, name, price) values ('50000000-0000-0000-0000-000000000002', 'Intrus', 100)$$, '42501', null, 'impossible d''ajouter un produit dans la boutique d''un autre');
+select lives_ok($sql$
+  do $block$
+  declare v_shop uuid;
+  begin
+    select id into v_shop from public.shops where slug = 'boutique-awa';
+    for i in 1..15 loop
+      if i = 1 then
+        insert into ctx (k, v) values ('free_product', public.save_catalog_product(v_shop, jsonb_build_object(
+          'name', 'P' || i, 'price', 1000, 'status', 'available',
+          'variants', '[]'::jsonb
+        ))::text);
+      else
+        perform public.save_catalog_product(v_shop, jsonb_build_object(
+        'name', 'P' || i, 'price', 1000, 'status', 'available',
+        'variants', '[]'::jsonb
+        ));
+      end if;
+    end loop;
+  end $block$
+$sql$, '15 produits autorises en plan gratuit');
+select throws_like($$select public.save_catalog_product((select id from public.shops where slug = 'boutique-awa'), jsonb_build_object('name', 'P16', 'price', 1000, 'status', 'available', 'variants', '[]'::jsonb))$$, 'plan_limit_products%', 'le 16e produit est refuse en plan gratuit');
+select lives_ok($$select public.set_catalog_item_deleted((select id from public.shops where slug = 'boutique-awa'), 'product', tests.v('free_product')::uuid, true)$$, 'le proprietaire place un produit dans la corbeille');
+select lives_ok($$select public.save_catalog_product((select id from public.shops where slug = 'boutique-awa'), jsonb_build_object('name', 'P16', 'price', 1000, 'status', 'available', 'variants', '[]'::jsonb))$$, 'la suppression libere une place dans le plan');
+select throws_like($$select public.set_catalog_item_deleted((select id from public.shops where slug = 'boutique-awa'), 'product', tests.v('free_product')::uuid, false)$$, 'plan_limit_products%', 'la restauration respecte la limite du plan');
+select throws_ok($$select public.save_catalog_product('50000000-0000-0000-0000-000000000002', jsonb_build_object('name', 'Intrus', 'price', 100, 'status', 'available', 'variants', '[]'::jsonb))$$, '42501', null, 'impossible d''ajouter un produit dans la boutique d''un autre');
+select tests.as_user('a0000000-0000-0000-0000-000000000004');
+select throws_ok($$select public.save_catalog_product('50000000-0000-0000-0000-000000000001', jsonb_build_object('name', 'Refus', 'price', 100, 'status', 'available', 'variants', '[]'::jsonb))$$, '42501', null, 'un employe sans droit catalogue ne peut pas ajouter de produit');
+select throws_ok($$insert into public.service_images (shop_id, service_id, path) values ('50000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000001/services/c0000000-0000-0000-0000-000000000001/refus.webp')$$, '42501', null, 'un employe sans droit catalogue ne peut pas ajouter une photo de service');
 select tests.as_user('a0000000-0000-0000-0000-000000000002');
-select throws_ok($$insert into public.products (shop_id, name, price) values ('50000000-0000-0000-0000-000000000001', 'Negatif', -5)$$, '23514', null, 'prix negatif refuse');
+select lives_ok($$insert into public.categories (id, shop_id, name) values ('d0000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000001', 'Outils')$$, 'le proprietaire ajoute une categorie racine');
+select lives_ok($$insert into public.categories (id, shop_id, parent_id, name) values ('d0000000-0000-0000-0000-000000000002', '50000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000001', 'Marteaux')$$, 'le proprietaire ajoute une sous-categorie');
+select throws_like($$update public.categories set parent_id = 'd0000000-0000-0000-0000-000000000002' where id = 'd0000000-0000-0000-0000-000000000001'$$, 'category_cycle%', 'les cycles de categories sont refuses');
+select lives_ok($$insert into public.service_images (shop_id, service_id, path) values ('50000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000001/services/c0000000-0000-0000-0000-000000000001/photo.webp')$$, 'le proprietaire ajoute une photo de service');
+select throws_ok($$insert into public.products (shop_id, name, price) values ('50000000-0000-0000-0000-000000000001', 'Direct', 500)$$, '42501', null, 'les ecritures produit directes sont interdites');
+select throws_ok($$select public.save_catalog_product('50000000-0000-0000-0000-000000000001', jsonb_build_object('name', 'Negatif', 'price', -5, 'status', 'available', 'variants', '[]'::jsonb))$$, '23514', null, 'prix negatif refuse par contrainte SQL');
+select lives_ok($$select public.save_catalog_product('50000000-0000-0000-0000-000000000001', jsonb_build_object('name', 'Produit autorise', 'price', 1000, 'status', 'available', 'variants', '[]'::jsonb))$$, 'un proprietaire peut creer un produit via RPC');
+select tests.as_user('a0000000-0000-0000-0000-000000000003');
+select throws_ok($$update public.services set price = 1 where id = 'c0000000-0000-0000-0000-000000000002'$$, '42501', null, 'la modification directe du prix service est interdite');
+select lives_ok($$select public.save_catalog_service('50000000-0000-0000-0000-000000000002', jsonb_build_object('name', 'Révision', 'duration_min', 60, 'price', 1000, 'deposit_amount', 0, 'active', true))$$, 'un proprietaire peut creer un service via RPC');
+select tests.as_user('a0000000-0000-0000-0000-000000000002');
 
 -- =====================================================================
 -- D. Commandes : creation, USSD, machine a etats
@@ -317,7 +363,7 @@ select tests.as_postgres();
 update public.shops set whatsapp = '+22670333333' where id = '50000000-0000-0000-0000-000000000003';
 select tests.as_user('a0000000-0000-0000-0000-000000000003');
 select throws_like($$select public.submit_shop_for_review('50000000-0000-0000-0000-000000000003')$$, 'missing_catalog%', 'soumission : au moins un produit ou service reel');
-select lives_ok($$insert into public.products (shop_id, name, price) values ('50000000-0000-0000-0000-000000000003', 'Article', 2000)$$, 'm2 ajoute un produit');
+select lives_ok($$select public.save_catalog_product('50000000-0000-0000-0000-000000000003', jsonb_build_object('name', 'Article', 'price', 2000, 'status', 'available', 'variants', '[]'::jsonb))$$, 'm2 ajoute un produit via RPC');
 select throws_like($$select public.submit_shop_for_review('50000000-0000-0000-0000-000000000003')$$, 'missing_payment_method%', 'soumission : un mode d''encaissement requis');
 select lives_ok($$insert into public.shop_payment_methods (shop_id, type, phone_or_code) values ('50000000-0000-0000-0000-000000000003', 'ussd_orange', '+22670333333')$$, 'm2 configure l''encaissement');
 select lives_ok($$select public.submit_shop_for_review('50000000-0000-0000-0000-000000000003')$$, 'soumission acceptee');
@@ -341,6 +387,10 @@ select is((select count(*) from public.audit_log), 0::bigint, 'un commercant ne 
 -- =====================================================================
 -- H. Storage
 -- =====================================================================
+select tests.as_user('a0000000-0000-0000-0000-000000000006');
+select lives_ok($$insert into storage.objects (bucket_id, name, owner) values ('profile-avatars', 'a0000000-0000-0000-0000-000000000006/avatar.webp', 'a0000000-0000-0000-0000-000000000006')$$, 'un client envoie son avatar');
+select tests.as_user('a0000000-0000-0000-0000-000000000007');
+select throws_ok($$insert into storage.objects (bucket_id, name, owner) values ('profile-avatars', 'a0000000-0000-0000-0000-000000000006/faux.webp', 'a0000000-0000-0000-0000-000000000007')$$, '42501', null, 'un client ne peut pas envoyer un avatar dans le dossier d''un autre');
 select tests.as_user('a0000000-0000-0000-0000-000000000006');
 select lives_ok(format($$insert into storage.objects (bucket_id, name, owner) values ('payment-proofs', %L, 'a0000000-0000-0000-0000-000000000006')$$, '50000000-0000-0000-0000-000000000001/' || tests.v('o1') || '/proof.png'), 'c1 envoie une capture dans le dossier de sa commande');
 select tests.as_user('a0000000-0000-0000-0000-000000000007');

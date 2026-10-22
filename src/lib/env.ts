@@ -5,6 +5,12 @@ const serverEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   NEXT_PUBLIC_SENTRY_DSN: z.union([z.string().url(), z.literal("")]).optional(),
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
+  NEXT_PUBLIC_SUPPORT_WHATSAPP: z
+    .string()
+    .regex(/^\+?[0-9]{8,15}$/)
+    .or(z.literal(""))
+    .optional(),
+  NEXT_PUBLIC_SUPPORT_EMAIL: z.string().email().or(z.literal("")).optional(),
   TURNSTILE_SECRET_KEY: z.union([z.string().min(1), z.literal("")]).optional(),
 });
 

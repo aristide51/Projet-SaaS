@@ -1,6 +1,6 @@
 # Cahier des charges : plateforme de boutiques pour commerces locaux (SaaS)
 
-*Version 1.0 · 22 octobre 2026 · Nom du produit : à définir*
+_Version 1.0 · 22 octobre 2026 · Nom du produit : à définir_
 
 ## 1. Vision et objectifs
 
@@ -70,9 +70,13 @@ Next.js (App Router) + TypeScript, Cloudflare, Supabase (Postgres, Auth, Storage
 
 - Vérification de l’e-mail obligatoire avant toute action sensible
 
+- Réauthentification par mot de passe ou nouveau magic link si la dernière authentification date de plus de 10 minutes, exigée côté serveur pour changement de mot de passe, clés de paiement, e-mail et suppression du compte
+
 - Réinitialisation du mot de passe, changement d’e-mail, suppression du compte
 
 - Numéro de téléphone obligatoire au moment de la première commande ou réservation (format burkinabè validé)
+
+- Profil : modification du nom, du téléphone burkinabè normalisé et de l’avatar facultatif ; la demande de suppression est enregistrée avant son traitement par une Edge Function
 
 - Sessions à durée limitée, déconnexion sur tous les appareils
 
@@ -101,6 +105,10 @@ Next.js (App Router) + TypeScript, Cloudflare, Supabase (Postgres, Auth, Storage
 - Import en masse par fichier CSV pour les commerçants qui ont beaucoup de références
 
 - Upload des images : compression et conversion WebP côté client, taille et types limités, plusieurs tailles générées pour l’affichage
+
+- Tableau de bord catalogue : gestion hiérarchique des catégories, produits, variantes et services ; recherche par nom, référence, compatibilité et description. Les prix sont des entiers FCFA et toute écriture de prix passe par une RPC contrôlée par la permission `catalog`.
+
+- Plan Gratuit : maximum de 15 produits actifs non-exemples ; les suppressions sont conservées 30 jours dans la corbeille et peuvent être restaurées pendant cette période, sous réserve de la limite du plan. Les employés sans permission `catalog` ne peuvent pas accéder à la gestion du catalogue dans le tableau de bord ni effectuer ses écritures.
 
 ### 4.4 Panier et commandes
 
@@ -288,7 +296,7 @@ Brouillon et reprise
 
 - Chaque champ est enregistré automatiquement environ 1 seconde après la dernière saisie, avec un indicateur « Enregistré »
 
-- Si la connexion coupe, la saisie reste dans le navigateur et se synchronise au retour du réseau ; seul le brouillon fonctionne ainsi, jamais un paiement
+- Si la connexion coupe, la saisie reste dans le stockage local du navigateur (y compris le logo en attente) et se synchronise au retour du réseau ; seul le brouillon fonctionne ainsi, jamais un paiement
 
 - Le commerçant reprend à l’étape où il s’est arrêté, depuis n’importe quel appareil, avec une checklist de ce qui manque pour publier (nom, adresse, WhatsApp, au moins un produit ou service, un mode d’encaissement)
 
@@ -300,7 +308,7 @@ Aide à chaque étape
 
 - Pour les pilotes, mise en route accompagnée en direct
 
-Mesures : temps total, abandon par étape et demandes d’aide par étape, pour corriger les étapes qui bloquent.
+Mesures enregistrées dans le brouillon : temps cumulé, abandon et demandes d’aide par étape, pour corriger les étapes qui bloquent.
 
 ### 4.15 Statuts et transitions
 

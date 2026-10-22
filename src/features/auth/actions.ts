@@ -4,6 +4,13 @@ import { headers } from "next/headers";
 import { logError } from "@/lib/monitoring/sentry";
 import { getAuthErrorMessage } from "@/lib/errors";
 import { getSafeRedirectPath } from "@/lib/auth/redirect";
+import {
+  clearReauthPending,
+  clearReauthProof,
+  isReauthConfigured,
+  hasRecentReauthentication,
+  setReauthPending,
+} from "@/lib/security/reauth";
 import { createClient } from "@/lib/supabase/server";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import {
@@ -21,7 +28,7 @@ function failure(message: string): AuthActionResult {
   return { success: false, message };
 }
 
-async function getCallbackUrl(nextPath: string) {
+async function getCallbackUrl(nextPath: string, reauth = false) {
   const requestHeaders = await headers();
   const origin = requestHeaders.get("origin");
   const host =
@@ -41,6 +48,9 @@ async function getCallbackUrl(nextPath: string) {
 
     const callbackUrl = new URL("/auth/callback", callbackOrigin);
     callbackUrl.searchParams.set("next", getSafeRedirectPath(nextPath));
+    if (reauth) {
+      callbackUrl.searchParams.set("reauth", "1");
+    }
     return callbackUrl.toString();
   } catch {
     return null;
@@ -228,13 +238,18 @@ export async function sendPasswordReset(
     return challengeError;
   }
 
-  const callbackUrl = await getCallbackUrl("/auth/reset-password");
+  const callbackUrl = await getCallbackUrl("/auth/reset-password", true);
 
   if (!callbackUrl) {
     return failure("Impossible de préparer le lien de réinitialisation.");
   }
 
+  if (!isReauthConfigured()) {
+    return failure("La vérification renforcée n’est pas configurée.");
+  }
+
   try {
+    await setReauthPending();
     const supabase = await createClient();
     const { error } = await supabase.auth.resetPasswordForEmail(
       parsed.data.email,
@@ -242,6 +257,7 @@ export async function sendPasswordReset(
     );
 
     if (error) {
+      await clearReauthPending();
       return failure(getAuthErrorMessage(error));
     }
 
@@ -251,6 +267,7 @@ export async function sendPasswordReset(
         "Si un compte existe pour cette adresse, un lien de réinitialisation vient d’être envoyé.",
     };
   } catch (error) {
+    await clearReauthPending();
     await logError("auth_password_reset_request_failed", error);
     return failure("L’envoi du lien a échoué. Réessaie plus tard.");
   }
@@ -279,6 +296,10 @@ export async function updatePassword(
       return failure("Le lien de réinitialisation est invalide ou expiré.");
     }
 
+    if (!(await hasRecentReauthentication(userData.user.id))) {
+      return failure("Le lien de réinitialisation est invalide ou expiré.");
+    }
+
     const { error } = await supabase.auth.updateUser({
       password: parsed.data.password,
     });
@@ -287,6 +308,7 @@ export async function updatePassword(
       return failure(getAuthErrorMessage(error));
     }
 
+    await clearReauthProof();
     await supabase.auth.signOut({ scope: "local" });
     return {
       success: true,
