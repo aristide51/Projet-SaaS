@@ -87,8 +87,9 @@ Next.js (App Router) + TypeScript, Cloudflare, Supabase (Postgres, Auth, Storage
 - Statuts : brouillon, en attente de validation, publiée, suspendue
 
 - Page boutique publique : présentation, catalogue, services, avis, horaires, carte, boutons Appeler et WhatsApp
+- Vitrine publique (2.1) : accueil et fiche produit rendus côté serveur, catégories hiérarchiques, recherche plein texte et tolérante aux fautes, statut « ouvert maintenant » calculé pour Africa/Ouagadougou, métadonnées Open Graph et revalidation ciblée des caches lors des changements de boutique ou de catalogue. Les vitrines n’exposent ni produits masqués, supprimés ou exemples, ni données internes du catalogue.
 
-- Équipe : invitation d’employés par e-mail avec rôle
+- Équipe : le propriétaire invite des employés par e-mail (lien valable 7 jours, utilisable une seule fois), configure les permissions `catalog`, `orders`, `bookings`, `promotions`, `reviews`, `settings`, `payments` et peut révoquer une invitation ou retirer un membre. Le quota `max_staff` réserve aussi les places des invitations en attente.
 
 - Domaine personnalisé : hors MVP, prévu en V2
 
@@ -104,6 +105,8 @@ Next.js (App Router) + TypeScript, Cloudflare, Supabase (Postgres, Auth, Storage
 
 - Import en masse par fichier CSV pour les commerçants qui ont beaucoup de références
 
+- Import CSV : modèle téléchargeable, aperçu des lignes valides et invalides, validation Zod et import jusqu’à 500 produits par lots de 50. Les exemples quincaillerie, pièces détachées, garage et salon sont stockés en JSON, portent le badge « Exemple » et restent exclus de la vitrine publique et du quota tant qu’ils ne sont pas modifiés ; leur première modification les rend publiables sous réserve des règles habituelles.
+
 - Upload des images : compression et conversion WebP côté client, taille et types limités, plusieurs tailles générées pour l’affichage
 
 - Tableau de bord catalogue : gestion hiérarchique des catégories, produits, variantes et services ; recherche par nom, référence, compatibilité et description. Les prix sont des entiers FCFA et toute écriture de prix passe par une RPC contrôlée par la permission `catalog`.
@@ -112,9 +115,13 @@ Next.js (App Router) + TypeScript, Cloudflare, Supabase (Postgres, Auth, Storage
 
 ### 4.4 Panier et commandes
 
-- Panier lié au compte client, un panier par boutique
+- Panier serveur par boutique : lignes d’un compte isolées par RLS et mutations via RPC ; pour un visiteur, jeton opaque dans un cookie HttpOnly et empreinte seule stockée en base ; fusion à la connexion, articles limités à 1–99 et stock vérifié côté serveur (étape 2.2)
 
-- Récapitulatif avec code promo, mode de retrait (en boutique ou livraison à l’adresse indiquée, livraison gérée par le commerçant)
+- Aperçu de commande par RPC sans effet de bord : mêmes prix, stock, remise et total que la création ; retourne les erreurs de validation sans réserver le stock ni consommer un code promo (étape 2.3)
+
+- Tunnel de commande (étape 2.4) : connexion requise, retrait/livraison selon les réglages boutique, adresse, note et paiements actifs ; code promo et récapitulatif exact via `preview_order`, création uniquement via `create_order_from_cart`, erreurs métier avec suggestions et double soumission bloquée dans l’interface.
+
+- Suivi client (étape 2.7) : l’espace compte présente ses commandes par pages de 20, avec articles, statut et historique ; lien vers le paiement USSD tant qu’il reste nécessaire. Le client peut annuler directement une commande `pending_payment` via `transition_order`. Pour les commandes `payment_declared`, `paid`, `confirmed` ou `ready`, il soumet une demande suivie : le commerçant confirme le remboursement (référence obligatoire pour l’USSD), confirme l’annulation uniquement si le paiement déclaré n’a pas été reçu, ou refuse la demande avec motif. Les demandes sont réservées au client propriétaire et aux membres boutique autorisés « commandes » ; le traitement utilise les RPC et transitions existantes, sans mise à jour directe depuis le client.
 
 - Cycle de vie (détail et règles en 4.15, avec le statut payment_declared pour l’USSD) : pending_payment, paid, confirmed, ready, completed, cancelled, refunded
 
@@ -149,6 +156,8 @@ Le paiement par code USSD fonctionne sans compte marchand chez un agrégateur : 
 - Le commerçant renseigne dans son tableau de bord son numéro Orange Money et ou Moov, ou son code marchand, et le modèle de code USSD de son opérateur (les codes exacts viennent de l’opérateur, ils ne sont jamais codés en dur)
 
 - Au paiement, le client voit le montant exact, le numéro ou code à payer et une référence de commande courte (par exemple CMD-4F7K) ; un bouton ouvre le composeur avec le code USSD prérempli (lien tel:, à tester sur Android et iPhone), sinon le code s’affiche avec un bouton Copier
+
+- Écran client de paiement (étape 2.5) : compte à rebours avant expiration, déclaration par RPC de la référence et du numéro payeur, capture facultative dans le bucket privé `payment-proofs/{shop_id}/{order_id}/`, suivi Realtime du statut ; résultats d’essais appareils consignés dans [docs/ussd-tests.md](./ussd-tests.md).
 
 - Après paiement, le client saisit la référence de transaction reçue par SMS et le numéro qui a payé ; une capture d’écran du SMS est facultative (bucket privé, taille limitée)
 
@@ -250,6 +259,11 @@ Pro + domaine personnalisé (V2), support prioritaire, équipe étendue
 
 - Gestion des commandes, rendez-vous, produits, services, promotions, avis, équipe, paiements, abonnement, paramètres
 
+- Commandes (étape 2.6) : liste filtrable par boutique, statut et dates ; export CSV des résultats filtrés ; vérification des déclarations USSD avec référence, numéro payeur et capture privée ; confirmation ou rejet motivé via `transition_order`, avec une seule correction autorisée ; marquage manuel des paiements à la livraison ou au retrait après confirmation ; progression payé → confirmée → prête → terminée avec historique visible ; annulation avec motif et remboursement confirmé par le commerçant (référence obligatoire pour l’USSD). Chaque transition est enregistrée par la RPC et notifie le client. Les nouvelles commandes et déclarations déclenchent une alerte Realtime dans le tableau de bord ; le son est optionnel et désactivé par défaut.
+- E-mails transactionnels (étape 2.7) : les notifications de réception de commande, paiement déclaré et changements de statut sont ajoutées à une file privée puis envoyées de façon asynchrone par l’Edge Function `notify` via Resend. Les échecs ne bloquent pas une transition métier ; les tâches échouées sont retentées jusqu’à cinq fois. La fonction limite les envois à 10 par utilisateur et par heure, en lots de 20. Un lien signé permet de désactiver les e-mails non essentiels pendant 90 jours ; les e-mails nécessaires au suivi d’une commande restent envoyés. Aucun numéro de téléphone ni référence de transaction ne figure dans ces e-mails.
+
+- Cloche de notifications pour commerçants et clients : compteur non lus en temps réel, liste paginée, lecture individuelle et isolation par utilisateur
+
 - Utilisable sur téléphone comme sur ordinateur
 
 ### 4.12 Administration plateforme
@@ -257,6 +271,8 @@ Pro + domaine personnalisé (V2), support prioritaire, équipe étendue
 - Validation et suspension des boutiques, modération des avis et des contenus
 
 - Gestion des plans, statistiques globales, journal d’audit
+
+- Back-office v1 : file de validation triée par ancienneté, alerte visuelle après 12 h, fiche de contrôle (identité, logo, photos, coordonnées, catalogue réel hors exemples, CGU), approbation/refus avec motif obligatoire, e-mail de décision et suspension/réactivation journalisées
 
 - Outil de support : voir une boutique en lecture seule, avec traçabilité de chaque accès
 
@@ -284,11 +300,11 @@ Objectif : une boutique publiable en moins de 10 minutes, mesuré de l’inscrip
 
 4. Contact et lieu : numéro WhatsApp avec envoi de test, téléphone, quartier, horaires, épingle sur la carte
 
-5. Premiers produits ou services : ajout depuis la photo du téléphone, import CSV, ou exemples prêts à modifier selon le type de commerce (marqués « Exemple », jamais publiés tant qu’ils ne sont pas modifiés ou validés)
+5. Premiers produits ou services : ajout depuis la photo du téléphone, import CSV, ou exemples prêts à modifier selon le type de commerce (marqués « Exemple », jamais publiés tant qu’ils ne sont pas modifiés ou validés) ; au moins un élément réel est requis avant de continuer
 
-6. Encaissement : paiement USSD par défaut (numéro et code à saisir), paiement à la livraison ou au retrait, agrégateur plus tard
+6. Encaissement : paiement USSD Orange/Moov (numéro marchand et instruction USSD), paiement à la livraison ou au retrait, agrégateur plus tard ; les identifiants de l’agrégateur restent réservés au serveur
 
-7. Prévisualisation : aperçu de la vitrine sur téléphone et ordinateur tel que le client la verra, avec un bandeau « Aperçu, pas encore publié »
+7. Prévisualisation : aperçu privé de la vitrine sur téléphone et ordinateur tel que le client la verra, avec un bandeau « Aperçu, pas encore publié »
 
 8. Publication : un seul bouton, sous réserve de la validation administrateur (délai maximal de 24 h ; la décision, acceptée ou refusée avec motif et possibilité de corriger puis de soumettre à nouveau, est notifiée par e-mail et dans le tableau de bord) ; la boutique reçoit son lien, un QR code et un message WhatsApp prérédigé à partager
 
@@ -316,7 +332,7 @@ Le diagramme montre le cycle de vie d’une commande ; les règles ci-dessous s�
 
 cycle de vie d’une commande · 8 statuts
 
-Un rejet du commerçant ramène la commande à pending_payment une seule fois, pour corriger la référence. L’annulation après paiement ouvre un remboursement : le schéma la montre depuis paid, elle reste possible depuis confirmed et ready.
+Un rejet du commerçant ramène la commande à pending_payment une seule fois, pour corriger la référence. Le client demande l’annulation après déclaration ou réception du paiement ; le commerçant traite la demande en confirmant le remboursement (depuis payment_declared, paid, confirmed ou ready), en annulant une commande payment_declared seulement s’il confirme que le paiement n’a pas été reçu, ou en refusant avec motif. Chaque décision est atomique, historisée et notifiée.
 
 Commandes
 
@@ -718,7 +734,7 @@ Décisions validées le 22 octobre 2026 :
 
 Décision complémentaire du 22 octobre 2026 : le paiement par code USSD (mode manuel, section 4.5) est le mode d’encaissement principal du MVP. L’agrégateur automatique s’ajoute quand le point sur l’usage des identifiants du commerçant par la plateforme est confirmé par écrit par le fournisseur.
 
-Publication des boutiques (décision du 22 octobre 2026) : toute boutique passe par une validation administrateur sous 24 h. L’administrateur vérifie le nom, le logo, les photos, les coordonnées, les produits ou services (hors exemples non modifiés) et la conformité aux CGU. Une alerte est envoyée à l’administrateur pour toute demande en attente depuis plus de 12 h, afin de tenir le délai. Pendant l’attente, la boutique reste en brouillon et l’aperçu reste accessible au commerçant.
+Publication des boutiques (décision du 22 octobre 2026) : toute boutique passe par une validation administrateur sous 24 h. L’administrateur vérifie le nom, le logo, les photos, les coordonnées, les produits ou services (hors exemples non modifiés) et la conformité aux CGU. Le back-office signale visuellement les demandes en attente depuis plus de 12 h. Pendant l’attente, la boutique reste en brouillon et l’aperçu reste accessible au commerçant. L’acceptation des CGU par le commerçant n’est pas encore enregistrée dans le schéma : le contrôle de conformité relève actuellement de l’administrateur.
 
 ## 13. Prochaines étapes
 

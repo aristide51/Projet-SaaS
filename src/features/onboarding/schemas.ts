@@ -80,9 +80,27 @@ export const onboardingDraftSchema = z
   .strict();
 
 export const saveOnboardingSchema = z.object({
-  currentStep: z.number().int().min(1).max(5),
+  currentStep: z.number().int().min(1).max(8),
   draft: onboardingDraftSchema,
 });
+
+const ussdPaymentSchema = z.object({
+  type: z.enum(["ussd_orange", "ussd_moov"]),
+  phone: z.string().regex(/^(\+226)?[0-9]{8}$/),
+  ussdTemplate: z.string().trim().min(1).max(80),
+});
+const cashPaymentSchema = z.object({
+  type: z.enum(["cash_on_delivery", "pay_at_pickup"]),
+});
+
+export const onboardingPaymentMethodsSchema = z
+  .array(z.discriminatedUnion("type", [ussdPaymentSchema, cashPaymentSchema]))
+  .min(1)
+  .max(4)
+  .refine(
+    (methods) =>
+      new Set(methods.map((method) => method.type)).size === methods.length,
+  );
 
 export const initialOnboardingDraft = {
   category: "other",
@@ -112,6 +130,9 @@ export const initialOnboardingDraft = {
 
 export type OnboardingDraft = z.infer<typeof onboardingDraftSchema>;
 export type OnboardingCategory = (typeof SHOP_CATEGORIES)[number];
+export type OnboardingPaymentMethod = z.infer<
+  typeof onboardingPaymentMethodsSchema
+>[number];
 export const validShopSlugSchema = shopSlugSchema;
 export const validPhoneSchema = z.string().regex(/^\+?[0-9]{8,15}$/);
 export const validBrandColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/);

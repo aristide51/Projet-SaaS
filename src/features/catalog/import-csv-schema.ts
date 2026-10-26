@@ -81,11 +81,12 @@ export type CsvRowResult =
       errors: string[];
     };
 
-export function parseCsvRows(
-  rows: Record<string, string>[],
-): { valid: CsvRowInput[]; invalid: CsvRowResult[] } {
+export function parseCsvRows(rows: Record<string, string>[]): {
+  valid: CsvRowInput[];
+  invalid: Extract<CsvRowResult, { kind: "invalid" }>[];
+} {
   const valid: CsvRowInput[] = [];
-  const invalid: CsvRowResult[] = [];
+  const invalid: Extract<CsvRowResult, { kind: "invalid" }>[] = [];
 
   rows.forEach((row, index) => {
     const result = csvRowSchema.safeParse(row);

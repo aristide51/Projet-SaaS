@@ -11,9 +11,46 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const user = await requireVerifiedUser();
   const params = await searchParams;
   const supabase = await createClient();
+  const { data: memberships, error: membershipListError } = await supabase
+    .from("shop_members")
+    .select("shop_id, role, permissions")
+    .eq("user_id", user.id);
+
+  if (membershipListError) {
+    throw new Error("Impossible de charger tes droits de catalogue.", {
+      cause: membershipListError,
+    });
+  }
+
+  const catalogMemberships = (memberships ?? []).filter((member) => {
+    const permissions =
+      typeof member.permissions === "object" &&
+      member.permissions !== null &&
+      !Array.isArray(member.permissions)
+        ? member.permissions
+        : {};
+    return member.role === "owner" || permissions.catalog === true;
+  });
+
+  if (!catalogMemberships.length) {
+    return (
+      <main className="catalog-shell">
+        <section className="catalog-card" role="alert">
+          <h1>Accès refusé</h1>
+          <p>
+            Tu n’as pas de boutique avec la permission « catalogue ». Demande
+            au propriétaire de t’accorder ce droit.
+          </p>
+        </section>
+      </main>
+    );
+  }
+
+  const shopIds = catalogMemberships.map((member) => member.shop_id);
   const { data: shops, error: shopsError } = await supabase
     .from("shops")
     .select("id, name")
+    .in("id", shopIds)
     .order("created_at", { ascending: false });
 
   if (shopsError) {
@@ -54,27 +91,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     );
   }
 
-  const { data: member, error: memberError } = await supabase
-    .from("shop_members")
-    .select("role, permissions")
-    .eq("shop_id", shop.id)
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (memberError) {
-    throw new Error("Impossible de vérifier les droits du catalogue.", {
-      cause: memberError,
-    });
-  }
-
-  const permissions =
-    typeof member?.permissions === "object" &&
-    member.permissions !== null &&
-    !Array.isArray(member.permissions)
-      ? member.permissions
-      : {};
-
-  if (!member || (member.role !== "owner" && permissions.catalog !== true)) {
+  if (!catalogMemberships.some((member) => member.shop_id === shop.id)) {
     return (
       <main className="catalog-shell">
         <section className="catalog-card" role="alert">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { onboardingDraftSchema, type OnboardingDraft } from "./schemas";
 
 export type OnboardingSnapshot = {
@@ -19,7 +19,10 @@ function storageKey(shopId: string) {
 function getLocalSnapshot(shopId: string, serverSnapshot: OnboardingSnapshot) {
   const cached = snapshots.get(shopId);
 
-  if (cached?.serverUpdatedAt === serverSnapshot.serverUpdatedAt) {
+  if (
+    cached &&
+    Object.is(cached.serverUpdatedAt, serverSnapshot.serverUpdatedAt)
+  ) {
     return cached;
   }
 
@@ -84,10 +87,28 @@ export function useOnboardingSnapshot(
   shopId: string,
   serverSnapshot: OnboardingSnapshot,
 ) {
-  return useSyncExternalStore(
-    (listener) => subscribe(shopId, listener),
-    () => getLocalSnapshot(shopId, serverSnapshot),
-    () => serverSnapshot,
+  const subscribeToShop = useCallback(
+    (listener: () => void) => subscribe(shopId, listener),
+    [shopId],
+  );
+  const getSnapshot = useCallback(
+    () => JSON.stringify(getLocalSnapshot(shopId, serverSnapshot)),
+    [serverSnapshot, shopId],
+  );
+  const getServerSnapshot = useCallback(
+    () => JSON.stringify(serverSnapshot),
+    [serverSnapshot],
+  );
+
+  const serializedSnapshot = useSyncExternalStore(
+    subscribeToShop,
+    getSnapshot,
+    getServerSnapshot,
+  );
+
+  return useMemo(
+    () => JSON.parse(serializedSnapshot) as OnboardingSnapshot,
+    [serializedSnapshot],
   );
 }
 
@@ -98,6 +119,21 @@ export function writeOnboardingSnapshot(
   localStorage.setItem(storageKey(shopId), JSON.stringify(snapshot));
   snapshots.set(shopId, snapshot);
   listeners.get(shopId)?.forEach((listener) => listener());
+}
+
+export function updateOnboardingSnapshot(
+  shopId: string,
+  update: (snapshot: OnboardingSnapshot) => OnboardingSnapshot,
+) {
+  const snapshot = snapshots.get(shopId);
+
+  if (!snapshot) {
+    throw new Error("Le brouillon de la boutique n’est pas chargé.");
+  }
+
+  const next = update(snapshot);
+  writeOnboardingSnapshot(shopId, next);
+  return next;
 }
 
 export function useNetworkStatus() {

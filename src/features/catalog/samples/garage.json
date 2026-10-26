@@ -1,0 +1,43 @@
+{
+  "shopType": "garage",
+  "title": "Réparation et entretien",
+  "products": [
+    {
+      "name": "Pneu 175/65 R14",
+      "description": "Pneu tourisme, montage possible en atelier.",
+      "price": 12000,
+      "compare_at_price": null,
+      "sku": null,
+      "compatibility": null,
+      "stock": null,
+      "status": "available",
+      "category_name": "Pneumatiques",
+      "variant_name": null,
+      "variant_price": null,
+      "variant_stock": null
+    },
+    {
+      "name": "Kit de distribution",
+      "description": "Courroie et galets pour moteur essence.",
+      "price": 35000,
+      "compare_at_price": null,
+      "sku": null,
+      "compatibility": null,
+      "stock": null,
+      "status": "available",
+      "category_name": "Distribution",
+      "variant_name": null,
+      "variant_price": null,
+      "variant_stock": null
+    }
+  ],
+  "services": [
+    {
+      "name": "Vidange et filtre",
+      "description": "Vidange moteur et contrôle des niveaux.",
+      "duration_min": 45,
+      "price": 18000,
+      "deposit_amount": 0
+    }
+  ]
+}

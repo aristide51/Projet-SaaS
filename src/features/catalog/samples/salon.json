@@ -1,0 +1,50 @@
+{
+  "shopType": "salon",
+  "title": "Coiffure et soins",
+  "products": [
+    {
+      "name": "Shampoing doux 500 ml",
+      "description": "Shampoing doux pour tous types de cheveux.",
+      "price": 6500,
+      "compare_at_price": null,
+      "sku": null,
+      "compatibility": null,
+      "stock": null,
+      "status": "available",
+      "category_name": "Hygiène capillaire",
+      "variant_name": null,
+      "variant_price": null,
+      "variant_stock": null
+    },
+    {
+      "name": "Sérum hydratant 100 ml",
+      "description": "Sérum sans rinçage pour cheveux secs.",
+      "price": 8500,
+      "compare_at_price": null,
+      "sku": null,
+      "compatibility": null,
+      "stock": null,
+      "status": "available",
+      "category_name": "Soins",
+      "variant_name": null,
+      "variant_price": null,
+      "variant_stock": null
+    }
+  ],
+  "services": [
+    {
+      "name": "Coupe homme",
+      "description": "Coupe classique ou moderne.",
+      "duration_min": 30,
+      "price": 3000,
+      "deposit_amount": 0
+    },
+    {
+      "name": "Coupe femme avec brushing",
+      "description": "Coupe et mise en plis.",
+      "duration_min": 60,
+      "price": 8000,
+      "deposit_amount": 0
+    }
+  ]
+}

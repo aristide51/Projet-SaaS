@@ -1,11 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { expirePublicShopIndex } from "@/features/storefront/cache";
 import { logError } from "@/lib/monitoring/sentry";
 import { createClient, getUser } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/database";
 import {
   hasCompleteOpeningHours,
+  onboardingPaymentMethodsSchema,
   saveOnboardingSchema,
   validBrandColorSchema,
   validPhoneSchema,
@@ -256,11 +259,111 @@ export async function saveOnboardingDraft(
       return failure("Le brouillon n’a pas pu être enregistré. Réessaie.");
     }
 
-    revalidatePath("/dashboard/onboarding");
+    expirePublicShopIndex();
     return { success: true, message: "Enregistré." };
   } catch (error) {
     await logError("shop_onboarding_save_failed", error);
     return failure("Le brouillon n’a pas pu être enregistré. Réessaie.");
+  }
+}
+
+export async function saveOnboardingPaymentMethods(
+  shopId: string,
+  input: unknown,
+): Promise<OnboardingActionResult> {
+  const parsedShopId = z.string().uuid().safeParse(shopId);
+  const methods = onboardingPaymentMethodsSchema.safeParse(input);
+  if (!parsedShopId.success || !methods.success) {
+    return failure(
+      "Ajoute au moins un mode de paiement et vérifie les numéros et codes USSD.",
+    );
+  }
+
+  try {
+    const user = await getVerifiedOwner();
+    if (!user || !(await userOwnsShop(parsedShopId.data, user.id))) {
+      return failure("Tu n’as pas accès à cette boutique.");
+    }
+
+    const normalizedMethods = methods.data.map((method) =>
+      method.type === "ussd_orange" || method.type === "ussd_moov"
+        ? {
+            type: method.type,
+            phone: method.phone.startsWith("+226")
+              ? method.phone
+              : `+226${method.phone}`,
+            ussdTemplate: method.ussdTemplate,
+          }
+        : method,
+    );
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("save_onboarding_payment_methods", {
+      p_shop: parsedShopId.data,
+      p_methods: normalizedMethods satisfies Json,
+    });
+
+    if (error) {
+      await logError("shop_onboarding_payment_methods_save_failed", error);
+      return failure(
+        error.message.includes("invalid_payment_methods")
+          ? "Vérifie les numéros et codes USSD saisis."
+          : "Les modes d’encaissement n’ont pas pu être enregistrés.",
+      );
+    }
+
+    revalidatePath("/dashboard/onboarding");
+    revalidatePath("/dashboard/onboarding/preview");
+    return { success: true, message: "Modes d’encaissement enregistrés." };
+  } catch (error) {
+    await logError("shop_onboarding_payment_methods_save_failed", error);
+    return failure("Les modes d’encaissement n’ont pas pu être enregistrés.");
+  }
+}
+
+export async function submitShopForReview(
+  shopId: unknown,
+): Promise<OnboardingActionResult> {
+  const parsedShopId = z.string().uuid().safeParse(shopId);
+  if (!parsedShopId.success) {
+    return failure("Cette boutique ne peut pas être soumise.");
+  }
+
+  try {
+    const user = await getVerifiedOwner();
+    if (!user || !(await userOwnsShop(parsedShopId.data, user.id))) {
+      return failure("Tu n’as pas accès à cette boutique.");
+    }
+
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("submit_shop_for_review", {
+      p_shop: parsedShopId.data,
+    });
+    if (error) {
+      await logError("shop_onboarding_submit_failed", error);
+      const errors: Record<string, string> = {
+        missing_whatsapp: "Ajoute un numéro WhatsApp valide à ta boutique.",
+        missing_catalog: "Ajoute au moins un vrai produit ou service.",
+        missing_payment_method: "Configure au moins un mode d’encaissement.",
+        invalid_review_state: "Cette boutique a déjà été soumise.",
+      };
+      const match = Object.entries(errors).find(([key]) =>
+        error.message.includes(key),
+      );
+      return failure(
+        match?.[1] ?? "La boutique n’a pas pu être soumise. Réessaie.",
+      );
+    }
+
+    revalidatePath("/dashboard/onboarding");
+    revalidatePath("/dashboard");
+    return {
+      success: true,
+      message: "Ta boutique a été envoyée pour validation.",
+      shopId: parsedShopId.data,
+    };
+  } catch (error) {
+    await logError("shop_onboarding_submit_failed", error);
+    return failure("La boutique n’a pas pu être soumise. Réessaie.");
   }
 }
 

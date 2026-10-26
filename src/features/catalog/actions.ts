@@ -3,11 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { logError } from "@/lib/monitoring/sentry";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { revalidatePublicShop } from "@/features/storefront/cache";
 import {
   categoryInputSchema,
   productInputSchema,
   serviceInputSchema,
 } from "./schemas";
+import { getSampleCatalog, sampleShopTypeSchema } from "./sample-products";
 
 type CatalogActionResult =
   | {
@@ -124,6 +126,7 @@ export async function saveCategory(
       );
     }
 
+    revalidatePublicShop(shopId);
     revalidatePath("/dashboard/catalog");
     return { success: true, message: "Catégorie enregistrée." };
   } catch (error) {
@@ -156,6 +159,7 @@ export async function deleteCategory(
       );
     }
 
+    revalidatePublicShop(shopId);
     revalidatePath("/dashboard/catalog");
     return { success: true, message: "Catégorie supprimée." };
   } catch (error) {
@@ -216,6 +220,7 @@ export async function saveProduct(
       );
     }
 
+    revalidatePublicShop(shopId);
     revalidatePath("/dashboard/catalog");
     return {
       success: true,
@@ -268,6 +273,7 @@ export async function saveService(
       );
     }
 
+    revalidatePublicShop(shopId);
     revalidatePath("/dashboard/catalog");
     return {
       success: true,
@@ -277,6 +283,49 @@ export async function saveService(
   } catch (error) {
     await logError("catalog_service_save_failed", error);
     return failure("Le service n’a pas pu être enregistré. Réessaie.");
+  }
+}
+
+export async function seedCatalogSamples(
+  shopId: string,
+  input: unknown,
+): Promise<CatalogActionResult> {
+  const parsed = sampleShopTypeSchema.safeParse(input);
+  if (!parsed.success) {
+    return failure("Choisis un type de commerce proposé.");
+  }
+
+  try {
+    const access = await getCatalogAccess(shopId);
+    if ("error" in access) return failure(access.error);
+    const catalog = getSampleCatalog(parsed.data);
+    const { error } = await access.supabase.rpc("seed_catalog_samples", {
+      p_shop: shopId,
+      p_catalog: {
+        products: catalog.products,
+        services: catalog.services,
+      },
+    });
+
+    if (error) {
+      await logError("catalog_sample_seed_failed", error);
+      return failure(
+        error.message.includes("sample_catalog_already_loaded")
+          ? "Des exemples sont déjà présents dans ce catalogue."
+          : "Les exemples n’ont pas pu être ajoutés. Réessaie.",
+      );
+    }
+
+    revalidatePublicShop(shopId);
+    revalidatePath("/dashboard/catalog");
+    return {
+      success: true,
+      message:
+        "Exemples ajoutés. Ils resteront invisibles sur ta vitrine tant que tu ne les auras pas modifiés.",
+    };
+  } catch (error) {
+    await logError("catalog_sample_seed_failed", error);
+    return failure("Les exemples n’ont pas pu être ajoutés. Réessaie.");
   }
 }
 
@@ -301,6 +350,7 @@ export async function setCatalogItemDeleted(
       return failure(messageForDatabaseError(error.message));
     }
 
+    revalidatePublicShop(shopId);
     revalidatePath("/dashboard/catalog");
     return {
       success: true,
@@ -403,6 +453,7 @@ export async function uploadProductImage(
       return failure("L’image a été envoyée mais n’a pas pu être associée.");
     }
 
+    revalidatePublicShop(shopId);
     revalidatePath("/dashboard/catalog");
     return { success: true, message: "Image ajoutée." };
   } catch (error) {
@@ -456,6 +507,7 @@ export async function deleteProductImage(
       );
     }
 
+    revalidatePublicShop(shopId);
     revalidatePath("/dashboard/catalog");
     return { success: true, message: "Image supprimée." };
   } catch (error) {
@@ -505,190 +557,202 @@ export async function reorderProductImages(
       }
     }
 
-    export async function uploadServiceImage(
-      shopId: string,
-      serviceId: string,
-      file: File,
-    ): Promise<CatalogActionResult> {
-      if (!(file instanceof File) || file.size === 0 || file.size > 5 * 1024 * 1024) {
-        return failure("Chaque image WebP doit peser 5 Mo maximum.");
-      }
+    revalidatePublicShop(shopId);
+    revalidatePath("/dashboard/catalog");
+    return { success: true, message: "Ordre des images enregistré." };
+  } catch (error) {
+    await logError("catalog_image_reorder_failed", error);
+    return failure("L’ordre des images n’a pas pu être enregistré.");
+  }
+}
 
-      let bytes: Uint8Array;
-      try {
-        bytes = new Uint8Array(await file.arrayBuffer());
-      } catch (error) {
-        await logError("catalog_image_upload_failed", error);
-        return failure("Le contenu de l’image n’a pas pu être lu.");
-      }
-      if (
-        file.type !== "image/webp" ||
-        bytes[0] !== 0x52 ||
-        bytes[1] !== 0x49 ||
-        bytes[2] !== 0x46 ||
-        bytes[3] !== 0x46 ||
-        bytes[8] !== 0x57 ||
-        bytes[9] !== 0x45 ||
-        bytes[10] !== 0x42 ||
-        bytes[11] !== 0x50
-      ) {
-        return failure("L’image doit être convertie au format WebP.");
-      }
+export async function uploadServiceImage(
+  shopId: string,
+  serviceId: string,
+  file: File,
+): Promise<CatalogActionResult> {
+  if (
+    !(file instanceof File) ||
+    file.size === 0 ||
+    file.size > 5 * 1024 * 1024
+  ) {
+    return failure("Chaque image WebP doit peser 5 Mo maximum.");
+  }
 
-      try {
-        const access = await getCatalogAccess(shopId);
-        if ("error" in access) return failure(access.error);
-        const { data: service, error: serviceError } = await access.supabase
-          .from("services")
-          .select("id")
-          .eq("id", serviceId)
-          .eq("shop_id", shopId)
-          .is("deleted_at", null)
-          .maybeSingle();
-        if (serviceError || !service) {
-          if (serviceError) {
-            await logError("catalog_image_parent_check_failed", serviceError);
-          }
-          return failure("Ce service est introuvable.");
-        }
+  let bytes: Uint8Array;
+  try {
+    bytes = new Uint8Array(await file.arrayBuffer());
+  } catch (error) {
+    await logError("catalog_image_upload_failed", error);
+    return failure("Le contenu de l’image n’a pas pu être lu.");
+  }
+  if (
+    file.type !== "image/webp" ||
+    bytes[0] !== 0x52 ||
+    bytes[1] !== 0x49 ||
+    bytes[2] !== 0x46 ||
+    bytes[3] !== 0x46 ||
+    bytes[8] !== 0x57 ||
+    bytes[9] !== 0x45 ||
+    bytes[10] !== 0x42 ||
+    bytes[11] !== 0x50
+  ) {
+    return failure("L’image doit être convertie au format WebP.");
+  }
 
-        const { count, error: countError } = await access.supabase
-          .from("service_images")
-          .select("id", { count: "exact", head: true })
-          .eq("shop_id", shopId)
-          .eq("service_id", serviceId);
-        if (countError) {
-          await logError("catalog_image_count_failed", countError);
-          return failure("Les images du service n’ont pas pu être chargées.");
-        }
-
-        const path = `${shopId}/services/${serviceId}/${crypto.randomUUID()}.webp`;
-        const { error: uploadError } = await access.supabase.storage
-          .from("shop-assets")
-          .upload(path, file, { contentType: "image/webp", upsert: false });
-        if (uploadError) {
-          await logError("catalog_image_upload_failed", uploadError);
-          return failure("L’image n’a pas pu être envoyée. Vérifie la connexion.");
-        }
-        const { error: recordError } = await access.supabase
-          .from("service_images")
-          .insert({
-            shop_id: shopId,
-            service_id: serviceId,
-            path,
-            position: count ?? 0,
-          });
-        if (recordError) {
-          await logError("catalog_image_record_failed", recordError);
-          const { error: cleanupError } = await access.supabase.storage
-            .from("shop-assets")
-            .remove([path]);
-          if (cleanupError) {
-            await logError("catalog_image_cleanup_failed", cleanupError);
-          }
-          return failure("L’image a été envoyée mais n’a pas pu être associée.");
-        }
-        revalidatePath("/dashboard/catalog");
-        return { success: true, message: "Photo de service ajoutée." };
-      } catch (error) {
-        await logError("catalog_image_upload_failed", error);
-        return failure("L’image n’a pas pu être envoyée. Réessaie.");
+  try {
+    const access = await getCatalogAccess(shopId);
+    if ("error" in access) return failure(access.error);
+    const { data: service, error: serviceError } = await access.supabase
+      .from("services")
+      .select("id")
+      .eq("id", serviceId)
+      .eq("shop_id", shopId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (serviceError || !service) {
+      if (serviceError) {
+        await logError("catalog_image_parent_check_failed", serviceError);
       }
+      return failure("Ce service est introuvable.");
     }
 
-    export async function deleteServiceImage(
-      shopId: string,
-      serviceId: string,
-      imageId: string,
-    ): Promise<CatalogActionResult> {
-      try {
-        const access = await getCatalogAccess(shopId);
-        if ("error" in access) return failure(access.error);
-        const { data: image, error: imageError } = await access.supabase
-          .from("service_images")
-          .select("id, path")
-          .eq("id", imageId)
-          .eq("shop_id", shopId)
-          .eq("service_id", serviceId)
-          .maybeSingle();
-        if (
-          imageError ||
-          !image ||
-          !image.path.startsWith(`${shopId}/services/${serviceId}/`)
-        ) {
-          if (imageError) await logError("catalog_image_lookup_failed", imageError);
-          return failure("Cette image est introuvable.");
-        }
-        const { error: storageError } = await access.supabase.storage
-          .from("shop-assets")
-          .remove([image.path]);
-        if (storageError) {
-          await logError("catalog_image_delete_failed", storageError);
-          return failure("L’image du stockage n’a pas pu être supprimée.");
-        }
-        const { error } = await access.supabase
-          .from("service_images")
-          .delete()
-          .eq("id", imageId)
-          .eq("shop_id", shopId);
-        if (error) {
-          await logError("catalog_image_record_delete_failed", error);
-          return failure("Le fichier est supprimé mais son entrée n’a pas pu être retirée.");
-        }
-        revalidatePath("/dashboard/catalog");
-        return { success: true, message: "Photo de service supprimée." };
-      } catch (error) {
-        await logError("catalog_image_delete_failed", error);
-        return failure("L’image n’a pas pu être supprimée. Réessaie.");
-      }
+    const { count, error: countError } = await access.supabase
+      .from("service_images")
+      .select("id", { count: "exact", head: true })
+      .eq("shop_id", shopId)
+      .eq("service_id", serviceId);
+    if (countError) {
+      await logError("catalog_image_count_failed", countError);
+      return failure("Les images du service n’ont pas pu être chargées.");
     }
 
-    export async function reorderServiceImages(
-      shopId: string,
-      serviceId: string,
-      imageIds: string[],
-    ): Promise<CatalogActionResult> {
-      try {
-        const access = await getCatalogAccess(shopId);
-        if ("error" in access) return failure(access.error);
-        const { data: images, error: fetchError } = await access.supabase
-          .from("service_images")
-          .select("id")
-          .eq("shop_id", shopId)
-          .eq("service_id", serviceId);
-        if (fetchError) {
-          await logError("catalog_image_reorder_failed", fetchError);
-          return failure("L’ordre des images n’a pas pu être enregistré.");
-        }
-        if (
-          images.length !== imageIds.length ||
-          new Set(imageIds).size !== imageIds.length ||
-          !imageIds.every((id) => images.some((image) => image.id === id))
-        ) {
-          return failure("La liste d’images a changé. Recharge la page et réessaie.");
-        }
-        for (const [position, id] of imageIds.entries()) {
-          const { error } = await access.supabase
-            .from("service_images")
-            .update({ position })
-            .eq("id", id)
-            .eq("shop_id", shopId)
-            .eq("service_id", serviceId);
-          if (error) {
-            await logError("catalog_image_reorder_failed", error);
-            return failure("L’ordre des images n’a pas pu être enregistré.");
-          }
-        }
-        revalidatePath("/dashboard/catalog");
-        return { success: true, message: "Ordre des photos enregistré." };
-      } catch (error) {
+    const path = `${shopId}/services/${serviceId}/${crypto.randomUUID()}.webp`;
+    const { error: uploadError } = await access.supabase.storage
+      .from("shop-assets")
+      .upload(path, file, { contentType: "image/webp", upsert: false });
+    if (uploadError) {
+      await logError("catalog_image_upload_failed", uploadError);
+      return failure("L’image n’a pas pu être envoyée. Vérifie la connexion.");
+    }
+    const { error: recordError } = await access.supabase
+      .from("service_images")
+      .insert({
+        shop_id: shopId,
+        service_id: serviceId,
+        path,
+        position: count ?? 0,
+      });
+    if (recordError) {
+      await logError("catalog_image_record_failed", recordError);
+      const { error: cleanupError } = await access.supabase.storage
+        .from("shop-assets")
+        .remove([path]);
+      if (cleanupError) {
+        await logError("catalog_image_cleanup_failed", cleanupError);
+      }
+      return failure("L’image a été envoyée mais n’a pas pu être associée.");
+    }
+    revalidatePublicShop(shopId);
+    revalidatePath("/dashboard/catalog");
+    return { success: true, message: "Photo de service ajoutée." };
+  } catch (error) {
+    await logError("catalog_image_upload_failed", error);
+    return failure("L’image n’a pas pu être envoyée. Réessaie.");
+  }
+}
+
+export async function deleteServiceImage(
+  shopId: string,
+  serviceId: string,
+  imageId: string,
+): Promise<CatalogActionResult> {
+  try {
+    const access = await getCatalogAccess(shopId);
+    if ("error" in access) return failure(access.error);
+    const { data: image, error: imageError } = await access.supabase
+      .from("service_images")
+      .select("id, path")
+      .eq("id", imageId)
+      .eq("shop_id", shopId)
+      .eq("service_id", serviceId)
+      .maybeSingle();
+    if (
+      imageError ||
+      !image ||
+      !image.path.startsWith(`${shopId}/services/${serviceId}/`)
+    ) {
+      if (imageError) await logError("catalog_image_lookup_failed", imageError);
+      return failure("Cette image est introuvable.");
+    }
+    const { error: storageError } = await access.supabase.storage
+      .from("shop-assets")
+      .remove([image.path]);
+    if (storageError) {
+      await logError("catalog_image_delete_failed", storageError);
+      return failure("L’image du stockage n’a pas pu être supprimée.");
+    }
+    const { error } = await access.supabase
+      .from("service_images")
+      .delete()
+      .eq("id", imageId)
+      .eq("shop_id", shopId);
+    if (error) {
+      await logError("catalog_image_record_delete_failed", error);
+      return failure(
+        "Le fichier est supprimé mais son entrée n’a pas pu être retirée.",
+      );
+    }
+    revalidatePublicShop(shopId);
+    revalidatePath("/dashboard/catalog");
+    return { success: true, message: "Photo de service supprimée." };
+  } catch (error) {
+    await logError("catalog_image_delete_failed", error);
+    return failure("L’image n’a pas pu être supprimée. Réessaie.");
+  }
+}
+
+export async function reorderServiceImages(
+  shopId: string,
+  serviceId: string,
+  imageIds: string[],
+): Promise<CatalogActionResult> {
+  try {
+    const access = await getCatalogAccess(shopId);
+    if ("error" in access) return failure(access.error);
+    const { data: images, error: fetchError } = await access.supabase
+      .from("service_images")
+      .select("id")
+      .eq("shop_id", shopId)
+      .eq("service_id", serviceId);
+    if (fetchError) {
+      await logError("catalog_image_reorder_failed", fetchError);
+      return failure("L’ordre des images n’a pas pu être enregistré.");
+    }
+    if (
+      images.length !== imageIds.length ||
+      new Set(imageIds).size !== imageIds.length ||
+      !imageIds.every((id) => images.some((image) => image.id === id))
+    ) {
+      return failure(
+        "La liste d’images a changé. Recharge la page et réessaie.",
+      );
+    }
+    for (const [position, id] of imageIds.entries()) {
+      const { error } = await access.supabase
+        .from("service_images")
+        .update({ position })
+        .eq("id", id)
+        .eq("shop_id", shopId)
+        .eq("service_id", serviceId);
+      if (error) {
         await logError("catalog_image_reorder_failed", error);
         return failure("L’ordre des images n’a pas pu être enregistré.");
       }
     }
-
+    revalidatePublicShop(shopId);
     revalidatePath("/dashboard/catalog");
-    return { success: true, message: "Ordre des images enregistré." };
+    return { success: true, message: "Ordre des photos enregistré." };
   } catch (error) {
     await logError("catalog_image_reorder_failed", error);
     return failure("L’ordre des images n’a pas pu être enregistré.");

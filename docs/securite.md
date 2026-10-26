@@ -46,6 +46,28 @@ La preuve est un cookie `HttpOnly`, `SameSite=Lax`, signé par HMAC-SHA-256, li�
 
 Le sélecteur de lieu charge à la demande les tuiles OpenStreetMap via `tile.openstreetmap.org`, avec l’attribution requise. L’adresse saisie n’est pas envoyée à un service de géocodage ; la carte ne reçoit que les coordonnées choisies. Informer les commerçants que leur navigateur contacte le fournisseur de tuiles et que son adresse IP peut lui être visible. Pour le support, renseigner `NEXT_PUBLIC_SUPPORT_WHATSAPP` (format international) et `NEXT_PUBLIC_SUPPORT_EMAIL` dans chaque environnement ; ne pas mettre d’informations client dans les messages d’aide au-delà de l’identifiant boutique et de l’étape.
 
+## Invitations d’équipe
+
+La fonction Edge `send-shop-invitation` utilise les secrets gérés par Supabase `SUPABASE_URL`, `SUPABASE_ANON_KEY` et `SUPABASE_SERVICE_ROLE_KEY`, ainsi que `RESEND_API_KEY`, `RESEND_FROM_EMAIL` et `APP_BASE_URL`. Configurer ces valeurs avec `supabase secrets set` dans chaque environnement ; ne jamais les inscrire dans le dépôt ni dans les journaux. `APP_BASE_URL` doit être l’origine HTTPS de l’application en production (localhost est accepté en local). La clé `service_role` est réservée à cette fonction Edge : elle ne doit jamais être configurée côté navigateur ou dans les variables `NEXT_PUBLIC_*`.
+
+Les invitations conservent uniquement le SHA-256 du jeton aléatoire, valable sept jours et invalidé après acceptation, révocation ou renvoi. L’acceptation requiert une adresse e-mail confirmée identique à celle invitée. Les modifications des membres et permissions sont réservées au propriétaire via les RPC ; les places d’invitation en attente sont comprises dans le quota `max_staff`.
+
+## Décisions d’administration
+
+Le back-office vérifie le rôle administrateur côté serveur. Les décisions de publication et de suspension passent par `review_shop` et `set_shop_suspended`, qui contrôlent le rôle dans Postgres et écrivent dans `audit_log`. Les décisions créent aussi les notifications in-app prévues par la RPC. `send-shop-review-decision` revérifie le JWT et le rôle avant d’envoyer le message Resend ; configurer `RESEND_API_KEY`, `RESEND_FROM_EMAIL` et `APP_BASE_URL` comme secrets Edge. Si l’envoi échoue après l’enregistrement de la décision, l’interface le signale sans annuler la décision ni masquer la notification in-app.
+
+## Notifications en temps réel
+
+La table `notifications` est publiée dans `supabase_realtime`. RLS limite les lectures et mises à jour à `auth.uid()` ; les privilèges SQL ne permettent de modifier que `read_at`, et les créations/suppressions restent réservées aux fonctions métier de la base. Le client filtre aussi son flux Realtime sur son identifiant ; cette valeur ne remplace jamais les contrôles RLS côté PostgreSQL.
+
+## E-mails transactionnels de commande
+
+L’Edge Function `notify` utilise `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `NOTIFY_WEBHOOK_SECRET` et `EMAIL_UNSUBSCRIBE_SECRET`. Configurer ces valeurs dans les secrets Edge de chaque environnement ; les deux secrets dédiés doivent faire au moins 32 caractères et ne doivent jamais être versionnés, exposés au navigateur ou écrits dans les journaux. `NOTIFY_WEBHOOK_SECRET` doit être identique au secret de la ligne de configuration conservée dans `private.notification_email_webhook_settings`. Cette table, la file `notification_email_jobs` et les préférences de désinscription ne sont pas accessibles aux rôles clients.
+
+Renseigner l’URL HTTPS de `notify` et le secret partagé dans la configuration privée du webhook, par un accès d’administration sécurisé. Le trigger SQL ajoute d’abord les tâches à la file ; une panne ou une absence de configuration du webhook ne fait pas échouer la transaction de commande. Configurer aussi un ordonnanceur externe ou Supabase Cron pour appeler périodiquement `notify` en POST, avec l’en-tête `x-notify-secret` et un corps JSON vide `{}` : cet appel récupère les tâches échues et permet les nouvelles tentatives même si l’appel immédiat du trigger a échoué. Ne pas placer le secret dans une URL, un dépôt ou une commande enregistrée dans l’historique du terminal.
+
+Les liens de désinscription utilisent un jeton HMAC à durée limitée et désactivent uniquement les futurs e-mails non essentiels. Les messages transactionnels ne contiennent ni numéro de téléphone ni référence de paiement. La limitation actuelle est de 10 messages par utilisateur et par heure ; la file traite au plus 20 tâches par invocation et abandonne après cinq tentatives.
+
 ## Vérifications
 
 - `pnpm test` vérifie le contrôle d’origine, le helper Turnstile et l’expiration/tampering de la preuve de réauthentification.

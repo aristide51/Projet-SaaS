@@ -21,7 +21,10 @@ vi.mock("next/headers", () => ({
 }));
 
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
-import { createClient as createServerClient } from "@/lib/supabase/server";
+import {
+  createClient as createServerClient,
+  getOptionalUser,
+} from "@/lib/supabase/server";
 
 describe("clients Supabase", () => {
   afterEach(() => {
@@ -61,5 +64,20 @@ describe("clients Supabase", () => {
         }),
       }),
     );
+  });
+
+  it("traite une session absente comme un visiteur anonyme", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:55421");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "local-anon-key");
+    serverClientFactory.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: null },
+          error: { name: "AuthSessionMissingError" },
+        }),
+      },
+    });
+
+    await expect(getOptionalUser()).resolves.toBeNull();
   });
 });

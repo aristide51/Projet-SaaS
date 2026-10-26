@@ -13,6 +13,7 @@ import {
 } from "@/lib/security/reauth";
 import { createClient } from "@/lib/supabase/server";
 import { verifyTurnstileToken } from "@/lib/turnstile";
+import { mergeGuestCartCookieIntoAccount } from "@/features/cart/data";
 import {
   emailOnlySchema,
   resetPasswordSchema,
@@ -166,6 +167,8 @@ export async function signIn(input: unknown): Promise<AuthActionResult> {
       await supabase.auth.signOut({ scope: "local" });
       return failure("Confirme ton adresse e-mail avant de te connecter.");
     }
+
+    await mergeGuestCartCookieIntoAccount();
 
     return {
       success: true,

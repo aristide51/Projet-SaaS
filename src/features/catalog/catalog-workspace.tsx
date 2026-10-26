@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
+import { Badge } from "@/components/ui/primitives";
 import {
   deleteCategory,
   deleteProductImage,
@@ -12,11 +13,13 @@ import {
   saveCategory,
   saveProduct,
   saveService,
+  seedCatalogSamples,
   setCatalogItemDeleted,
   uploadProductImage,
   uploadServiceImage,
 } from "./actions";
 import { convertImageToWebp } from "./image-processing";
+import type { SampleShopType } from "./sample-products";
 
 type Category = {
   id: string;
@@ -61,6 +64,7 @@ type Service = {
   price: number;
   deposit_amount: number;
   active: boolean;
+  is_sample: boolean;
   deleted_at: string | null;
   images: CatalogImage[];
 };
@@ -112,6 +116,13 @@ const emptyService: ServiceForm = {
   active: true,
 };
 
+const sampleTypes: { value: SampleShopType; label: string }[] = [
+  { value: "hardware", label: "Quincaillerie" },
+  { value: "auto_parts", label: "Pièces détachées" },
+  { value: "garage", label: "Garage" },
+  { value: "salon", label: "Salon" },
+];
+
 export function CatalogWorkspace({
   shopId,
   shopName,
@@ -150,6 +161,7 @@ export function CatalogWorkspace({
   const [selectedServiceImages, setSelectedServiceImages] = useState<File[]>(
     [],
   );
+  const [sampleType, setSampleType] = useState<SampleShopType>("hardware");
 
   async function submitCategory(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -233,12 +245,63 @@ export function CatalogWorkspace({
     event.preventDefault();
     setBusy(true);
     const result = await saveService(shopId, serviceForm);
+    if (!result.success || !result.id) {
+      setBusy(false);
+      setMessage(result.message);
+      return;
+    }
+
+    let imageWarning = "";
+    let pendingAfterFailure: File[] = [];
+    for (const [index, sourceFile] of selectedServiceImages.entries()) {
+      try {
+        const webp = await convertImageToWebp(sourceFile);
+        const uploadResult = await uploadServiceImage(shopId, result.id, webp);
+        if (!uploadResult.success) {
+          imageWarning = uploadResult.message;
+          pendingAfterFailure = selectedServiceImages.slice(index);
+          break;
+        }
+      } catch (error) {
+        imageWarning =
+          error instanceof Error
+            ? error.message
+            : "Une photo n’a pas pu être compressée.";
+        pendingAfterFailure = selectedServiceImages.slice(index);
+        break;
+      }
+    }
+
     setBusy(false);
-    setMessage(result.message);
-    if (result.success) {
+    setServiceForm((previous) => ({
+      ...previous,
+      id: result.id ?? previous.id,
+    }));
+    setMessage(
+      imageWarning
+        ? `${result.message} ${imageWarning}`
+        : selectedServiceImages.length
+          ? `${result.message} Photos ajoutées.`
+          : result.message,
+    );
+    if (!imageWarning) {
       setServiceForm(emptyService);
+      setSelectedServiceImages([]);
+      if (serviceImageInput.current) serviceImageInput.current.value = "";
+      router.refresh();
+    } else {
+      setSelectedServiceImages(pendingAfterFailure);
+      if (serviceImageInput.current) serviceImageInput.current.value = "";
       router.refresh();
     }
+  }
+
+  async function addSampleCatalog() {
+    setBusy(true);
+    const result = await seedCatalogSamples(shopId, sampleType);
+    setBusy(false);
+    setMessage(result.message);
+    if (result.success) router.refresh();
   }
 
   async function archiveItem(
@@ -253,6 +316,12 @@ export function CatalogWorkspace({
 
   async function removeImage(product: Product, imageId: string) {
     const result = await deleteProductImage(shopId, product.id, imageId);
+    setMessage(result.message);
+    if (result.success) router.refresh();
+  }
+
+  async function removeServiceImage(service: Service, imageId: string) {
+    const result = await deleteServiceImage(shopId, service.id, imageId);
     setMessage(result.message);
     if (result.success) router.refresh();
   }
@@ -274,6 +343,27 @@ export function CatalogWorkspace({
     ids[currentIndex] = nextImage;
     ids[nextIndex] = currentImage;
     const result = await reorderProductImages(shopId, product.id, ids);
+    setMessage(result.message);
+    if (result.success) router.refresh();
+  }
+
+  async function moveServiceImage(
+    service: Service,
+    imageId: string,
+    direction: -1 | 1,
+  ) {
+    const currentIndex = service.images.findIndex(
+      (image) => image.id === imageId,
+    );
+    const nextIndex = currentIndex + direction;
+    if (nextIndex < 0 || nextIndex >= service.images.length) return;
+    const ids = service.images.map((image) => image.id);
+    const currentImage = ids[currentIndex];
+    const nextImage = ids[nextIndex];
+    if (!currentImage || !nextImage) return;
+    ids[currentIndex] = nextImage;
+    ids[nextIndex] = currentImage;
+    const result = await reorderServiceImages(shopId, service.id, ids);
     setMessage(result.message);
     if (result.success) router.refresh();
   }
@@ -331,6 +421,14 @@ export function CatalogWorkspace({
         >
           Corbeille
         </Link>
+        {!isTrash ? (
+          <Link
+            className="ui-button ui-button--secondary ui-button--sm"
+            href={`/dashboard/catalog/import?shop=${encodeURIComponent(shopId)}`}
+          >
+            Importer un CSV
+          </Link>
+        ) : null}
       </nav>
 
       {message ? (
@@ -383,6 +481,42 @@ export function CatalogWorkspace({
               Rechercher
             </button>
           </form>
+
+          <section className="catalog-section">
+            <h2>Exemples prêts à modifier</h2>
+            <p>
+              Les exemples restent invisibles sur ta vitrine jusqu’à ce que tu
+              les modifies.
+            </p>
+            <div className="catalog-form-actions">
+              <label>
+                Type de commerce
+                <select
+                  onChange={(event) => {
+                    const selected = sampleTypes.find(
+                      (type) => type.value === event.target.value,
+                    );
+                    if (selected) setSampleType(selected.value);
+                  }}
+                  value={sampleType}
+                >
+                  {sampleTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="ui-button ui-button--secondary"
+                disabled={busy}
+                onClick={() => void addSampleCatalog()}
+                type="button"
+              >
+                Ajouter les exemples
+              </button>
+            </div>
+          </section>
 
           <section className="catalog-section">
             <h2>Catégories</h2>
@@ -839,7 +973,12 @@ export function CatalogWorkspace({
                         </div>
                       )}
                       <div>
-                        <h3>{product.name}</h3>
+                        <h3>
+                          {product.name}{" "}
+                          {product.is_sample ? (
+                            <Badge tone="warning">Exemple</Badge>
+                          ) : null}
+                        </h3>
                         <p>
                           {formatCfa(product.price)}
                           {product.stock === null
@@ -979,6 +1118,43 @@ export function CatalogWorkspace({
                     value={serviceForm.description}
                   />
                 </label>
+                <label>
+                  Photos du service (JPG, PNG ou WebP, compression WebP
+                  automatique, 5 Mo max par photo)
+                  <input
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    onChange={(event) =>
+                      setSelectedServiceImages(
+                        Array.from(event.target.files ?? []),
+                      )
+                    }
+                    ref={serviceImageInput}
+                    type="file"
+                  />
+                </label>
+                {serviceForm.id ? (
+                  <ProductImageManager
+                    label="Photos du service"
+                    onMove={(imageId, direction) => {
+                      const service = services.find(
+                        (item) => item.id === serviceForm.id,
+                      );
+                      if (service) {
+                        void moveServiceImage(service, imageId, direction);
+                      }
+                    }}
+                    onRemove={(imageId) => {
+                      const service = services.find(
+                        (item) => item.id === serviceForm.id,
+                      );
+                      if (service) void removeServiceImage(service, imageId);
+                    }}
+                    product={services.find(
+                      (item) => item.id === serviceForm.id,
+                    )}
+                  />
+                ) : null}
                 <label className="catalog-check">
                   <input
                     checked={serviceForm.active}
@@ -1021,7 +1197,12 @@ export function CatalogWorkspace({
                 {filteredServices.map((service) => (
                   <li className="catalog-item" key={service.id}>
                     <div>
-                      <h3>{service.name}</h3>
+                      <h3>
+                        {service.name}{" "}
+                        {service.is_sample ? (
+                          <Badge tone="warning">Exemple</Badge>
+                        ) : null}
+                      </h3>
                       <p>
                         {formatCfa(service.price)} · {service.duration_min} min
                         {service.deposit_amount
@@ -1123,17 +1304,19 @@ export function CatalogWorkspace({
 
 function ProductImageManager({
   product,
+  label = "Photos",
   onMove,
   onRemove,
 }: {
-  product: Product | undefined;
+  product: { images: CatalogImage[] } | undefined;
+  label?: string;
   onMove: (imageId: string, direction: -1 | 1) => void;
   onRemove: (imageId: string) => void;
 }) {
   if (!product?.images.length) return null;
   return (
     <fieldset className="catalog-image-list">
-      <legend>Photos enregistrées · réorganise avec les flèches</legend>
+      <legend>{label} enregistrées · réorganise avec les flèches</legend>
       {product.images.map((image, index) => (
         <div className="catalog-image-item" key={image.id}>
           {/* Supabase returns a public URL for the shop-assets bucket. */}

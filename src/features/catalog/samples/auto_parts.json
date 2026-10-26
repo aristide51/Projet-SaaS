@@ -1,0 +1,43 @@
+{
+  "shopType": "auto_parts",
+  "title": "Pièces et accessoires automobiles",
+  "products": [
+    {
+      "name": "Filtre à huile",
+      "description": "Filtre de rechange pour moteur automobile.",
+      "price": 4500,
+      "compare_at_price": null,
+      "sku": null,
+      "compatibility": null,
+      "stock": null,
+      "status": "available",
+      "category_name": "Filtres",
+      "variant_name": null,
+      "variant_price": null,
+      "variant_stock": null
+    },
+    {
+      "name": "Plaquettes de frein",
+      "description": "Jeu de plaquettes pour véhicule léger.",
+      "price": 8500,
+      "compare_at_price": null,
+      "sku": null,
+      "compatibility": null,
+      "stock": null,
+      "status": "available",
+      "category_name": "Freinage",
+      "variant_name": null,
+      "variant_price": null,
+      "variant_stock": null
+    }
+  ],
+  "services": [
+    {
+      "name": "Vidange moteur",
+      "description": "Vidange complète avec remplacement du filtre.",
+      "duration_min": 45,
+      "price": 15000,
+      "deposit_amount": 0
+    }
+  ]
+}

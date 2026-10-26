@@ -1,0 +1,10 @@
+app
+components
+features
+instrumentation-client.ts
+instrumentation.ts
+lib
+proxy.ts
+sentry.edge.config.ts
+sentry.server.config.ts
+types

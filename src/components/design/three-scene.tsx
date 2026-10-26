@@ -15,17 +15,33 @@ export default function ThreeScene() {
     let frame = 0;
     let renderer: import("three").WebGLRenderer | undefined;
     let scene: import("three").Scene | undefined;
+    let camera: import("three").PerspectiveCamera | undefined;
+    let group: import("three").Group | undefined;
+    let particles: import("three").Points | undefined;
+    let coreGeometry: import("three").IcosahedronGeometry | undefined;
+    let coreMaterial: import("three").MeshStandardMaterial | undefined;
+    let ringGeometry: import("three").TorusGeometry | undefined;
+    let ringMaterial: import("three").MeshStandardMaterial | undefined;
+    let particleGeometry: import("three").BufferGeometry | undefined;
+    let particleMaterial: import("three").PointsMaterial | undefined;
     let resizeObserver: ResizeObserver | undefined;
-    let cleanup = () => {};
     let cancelled = false;
+    let cleanup = () => {};
 
     async function initializeScene() {
       const THREE = await import("three");
       if (cancelled || !mount) return;
 
       scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
-      camera.position.z = 5;
+      scene.fog = new THREE.FogExp2(0x111a15, 0.045);
+
+      camera = new THREE.PerspectiveCamera(
+        36,
+        mount.clientWidth / Math.max(mount.clientHeight, 1),
+        0.1,
+        100,
+      );
+      camera.position.set(0, 1.2, 5.2);
 
       renderer = new THREE.WebGLRenderer({
         alpha: true,
@@ -39,33 +55,62 @@ export default function ThreeScene() {
       renderer.domElement.setAttribute("role", "presentation");
       mount.appendChild(renderer.domElement);
 
-      const group = new THREE.Group();
-      const geometry = new THREE.IcosahedronGeometry(1.18, 2);
-      const material = new THREE.MeshStandardMaterial({
+      group = new THREE.Group();
+
+      coreGeometry = new THREE.IcosahedronGeometry(1.05, 1);
+      coreMaterial = new THREE.MeshStandardMaterial({
         color: 0xd2f284,
-        metalness: 0.18,
-        roughness: 0.34,
+        metalness: 0.22,
+        roughness: 0.28,
         flatShading: true,
       });
-      const solid = new THREE.Mesh(geometry, material);
-      const wireframeGeometry = new THREE.IcosahedronGeometry(1.33, 1);
-      const wireframeMaterial = new THREE.MeshBasicMaterial({
+      const core = new THREE.Mesh(coreGeometry, coreMaterial);
+      group.add(core);
+
+      ringGeometry = new THREE.TorusGeometry(1.55, 0.035, 16, 64);
+      ringMaterial = new THREE.MeshStandardMaterial({
         color: 0xffffff,
-        wireframe: true,
+        metalness: 0.4,
+        roughness: 0.18,
         transparent: true,
-        opacity: 0.32,
+        opacity: 0.42,
       });
-      const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
-      group.add(solid, wireframe);
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      ring.rotation.x = Math.PI / 2;
+      group.add(ring);
+
       scene.add(group);
 
-      scene.add(new THREE.HemisphereLight(0xf6ffe8, 0x617c42, 2.3));
-      const keyLight = new THREE.DirectionalLight(0xffffff, 3);
-      keyLight.position.set(2.5, 3, 4);
+      const particleCount = motionPreference.matches ? 40 : 160;
+      particleGeometry = new THREE.BufferGeometry();
+      const particlePositions = new Float32Array(particleCount * 3);
+      for (let i = 0; i < particleCount * 3; i++) {
+        particlePositions[i] = (Math.random() - 0.5) * 14;
+      }
+      particleGeometry.setAttribute(
+        "position",
+        new THREE.BufferAttribute(particlePositions, 3),
+      );
+      particleMaterial = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: motionPreference.matches ? 0.04 : 0.055,
+        transparent: true,
+        opacity: 0.55,
+        sizeAttenuation: true,
+      });
+      particles = new THREE.Points(particleGeometry, particleMaterial);
+      scene.add(particles);
+
+      scene.add(new THREE.HemisphereLight(0xf6ffe8, 0x617c42, 1.8));
+      const keyLight = new THREE.DirectionalLight(0xffffff, 2.6);
+      keyLight.position.set(3, 4, 5);
       scene.add(keyLight);
+      const fillLight = new THREE.DirectionalLight(0xd2f284, 1.2);
+      fillLight.position.set(-3, 1, -3);
+      scene.add(fillLight);
 
       const resize = () => {
-        if (!mount || !renderer) return;
+        if (!mount || !renderer || !camera) return;
         const width = Math.max(mount.clientWidth, 1);
         const height = Math.max(mount.clientHeight, 1);
         renderer.setSize(width, height);
@@ -76,26 +121,57 @@ export default function ThreeScene() {
       resizeObserver = new ResizeObserver(resize);
       resizeObserver.observe(mount);
 
+      let mouseX = 0;
+      let mouseY = 0;
+      const onMouseMove = (event: MouseEvent) => {
+        if (motionPreference.matches) return;
+        mouseX = (event.clientX / mount.clientWidth) * 2 - 1;
+        mouseY = -(event.clientY / mount.clientHeight) * 2 + 1;
+      };
+      window.addEventListener("mousemove", onMouseMove);
+
       const render = (time = 0) => {
-        if (!renderer || !scene) return;
+        if (!renderer || !scene || !camera || !group || !particles) return;
+
+        const elapsed = time * 0.001;
+
         if (!motionPreference.matches) {
-          group.rotation.y = time * 0.00018;
-          group.rotation.x = Math.sin(time * 0.00022) * 0.12;
+          group.rotation.y = elapsed * 0.16;
+          group.rotation.x = Math.sin(elapsed * 0.22) * 0.1;
+          group.rotation.y += mouseX * 0.05;
+          group.rotation.x += mouseY * 0.05;
+
+          const positions = particles.geometry.attributes
+            .position as import("three").BufferAttribute;
+          const count = positions.count;
+          for (let i = 0; i < count; i++) {
+            let y = positions.getY(i);
+            y -= elapsed * 0.06;
+            if (y < -7) y += 14;
+            positions.setY(i, y);
+          }
+          positions.needsUpdate = true;
         }
+
         renderer.render(scene, camera);
+
         if (!motionPreference.matches) {
           frame = window.requestAnimationFrame(render);
         }
       };
 
       render();
+
       cleanup = () => {
         window.cancelAnimationFrame(frame);
+        window.removeEventListener("mousemove", onMouseMove);
         resizeObserver?.disconnect();
-        geometry.dispose();
-        material.dispose();
-        wireframeGeometry.dispose();
-        wireframeMaterial.dispose();
+        coreGeometry?.dispose();
+        coreMaterial?.dispose();
+        ringGeometry?.dispose();
+        ringMaterial?.dispose();
+        particleGeometry?.dispose();
+        particleMaterial?.dispose();
         renderer?.dispose();
         renderer?.domElement.remove();
       };
@@ -109,5 +185,12 @@ export default function ThreeScene() {
     };
   }, []);
 
-  return <div aria-hidden="true" className="three-scene" ref={mountRef} />;
+  return (
+    <div
+      aria-hidden="true"
+      className="three-scene"
+      ref={mountRef}
+      style={{ minHeight: 420 }}
+    />
+  );
 }

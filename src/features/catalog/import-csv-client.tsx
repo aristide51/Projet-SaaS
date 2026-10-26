@@ -1,223 +1,245 @@
 "use client";
 
-import { useCallback, useState, type FormEvent } from "react";
-import { Button, FormField, Input, Badge } from "@/components/ui/primitives";
+import { useState, type ChangeEvent } from "react";
+import { Badge } from "@/components/ui/primitives";
+import { checkCsvImportCapacity, importCsvProducts } from "./import-csv";
 import {
-  importCsvProducts,
-  validateCsvRows,
-  buildCsvTemplate,
+  parseCsvRows,
+  type CsvRowInput,
   type CsvRowResult,
-} from "./import-csv";
+} from "./import-csv-schema";
 import { downloadCsvTemplate } from "./csv-download";
+import { parseCatalogCsv } from "./csv-parser";
 
-function parseCsv(text: string): Record<string, string>[] {
-  const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
-  if (lines.length === 0) return [];
-
-  const headerLine = lines[0];
-  const headers = headerLine.split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
-
-  return lines.slice(1).map((line) => {
-    const values = line.split(",");
-    const row: Record<string, string> = {};
-    headers.forEach((header, index) => {
-      let value = values[index]?.trim() ?? "";
-      if (value.startsWith('"') && value.endsWith('"')) {
-        value = value.slice(1, -1).replace(/""/g, '"');
-      }
-      row[header] = value;
-    });
-    return row;
 type ImportCsvClientProps = {
   shopId: string;
 };
+
+const MAX_CSV_BYTES = 2 * 1024 * 1024;
+const MAX_CSV_ROWS = 500;
+const IMPORT_BATCH_SIZE = 50;
 
 export function ImportCsvClient({ shopId }: ImportCsvClientProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [result, setResult] = useState<{
-    validCount: number;
-    invalidCount: number;
-    invalidRows: CsvRowResult[];
+    validRows: CsvRowInput[];
+    invalidRows: Extract<CsvRowResult, { kind: "invalid" }>[];
   } | null>(null);
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [importProgress, setImportProgress] = useState<number | null>(null);
 
-  const handleDownloadTemplate = () => {
-    downloadCsvTemplate();
-  };
-
-  const handleFileChange = (event: FormEvent<HTMLInputElement>) => {
-    const input = event.currentTarget as HTMLInputElement;
-    if (!input.files?.[0]) return;
-    const selectedFile = input.files[0];
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const selectedFile = event.currentTarget.files?.[0];
+    if (!selectedFile) return;
     if (!selectedFile.name.toLowerCase().endsWith(".csv")) {
       setError("Le fichier doit être au format CSV.");
       setFile(null);
+      setResult(null);
+      return;
+    }
+    if (selectedFile.size > MAX_CSV_BYTES) {
+      setError("Le fichier CSV doit peser 2 Mo maximum.");
+      setFile(null);
+      setResult(null);
       return;
     }
     setFile(selectedFile);
     setError("");
+    setMessage("");
     setResult(null);
-  };
+  }
 
-  const handleParse = async () => {
+  async function previewFile() {
     if (!file) return;
     setError("");
-    setResult(null);
-
+    setMessage("");
     try {
-      const text = await file.text();
-      const rows = parseCsv(text);
-      if (rows.length === 0) {
+      const rows = parseCatalogCsv(await file.text());
+      if (!rows.length) {
         setError("Le fichier CSV ne contient aucune ligne de données.");
         return;
       }
-      const { valid, invalid } = validateCsvRows(rows);
+      if (rows.length > MAX_CSV_ROWS) {
+        setError(`Le fichier ne peut pas dépasser ${MAX_CSV_ROWS} lignes.`);
+        return;
+      }
+      const validation = parseCsvRows(rows);
       setResult({
-        validCount: valid.length,
-        invalidCount: invalid.length,
-        invalidRows: invalid,
+        validRows: validation.valid,
+        invalidRows: validation.invalid,
       });
-    } catch {
-      setError("Impossible de lire le fichier CSV.");
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Impossible de lire le fichier CSV.",
+      );
     }
-  };
+  }
 
-  const handleImport = async () => {
-    if (!result || result.validCount === 0) return;
+  async function importFile() {
+    if (!shopId || !result?.validRows.length) return;
     setIsPending(true);
     setError("");
-
+    setMessage("");
+    setImportProgress(0);
+    let imported = 0;
     try {
-      if (!shopId) {
-        setError("Impossible d’identifier la boutique cible.");
-        setIsPending(false);
+      const capacity = await checkCsvImportCapacity(
+        shopId,
+        result.validRows.length,
+      );
+      if (!capacity.success) {
+        setError(capacity.message);
         return;
       }
 
-      // Re-parser le fichier pour obtenir les lignes validées
-      if (!file) {
-        setIsPending(false);
-        return;
+      for (
+        let offset = 0;
+        offset < result.validRows.length;
+        offset += IMPORT_BATCH_SIZE
+      ) {
+        const batch = result.validRows.slice(
+          offset,
+          offset + IMPORT_BATCH_SIZE,
+        );
+        const batchResult = await importCsvProducts(shopId, batch);
+        if (!batchResult.success) {
+          setResult({
+            ...result,
+            validRows: result.validRows.slice(offset),
+          });
+          setError(
+            imported
+              ? `Import interrompu après ${imported} produit(s). ${batchResult.message} Les lots déjà enregistrés sont conservés.`
+              : batchResult.message,
+          );
+          return;
+        }
+        imported += batchResult.imported;
+        setImportProgress(imported);
       }
-      const text = await file.text();
-      const rows = parseCsv(text);
-      const { valid } = validateCsvRows(rows);
 
-      // Pour l'import par lots, on envoie les lignes valides
-      // Le shopId est récupéré depuis l'attribut data de la page
-      // Dans une version complète, ce serait passé par props
-      const result = await importCsvProducts(shopId, valid);
-
-      if (!result.success) {
-        setError(result.message);
-        setResult(null);
-        setIsPending(false);
-        return;
-      }
-
+      setMessage(`${imported} produit(s) importé(s) par lots de 50.`);
       setResult(null);
-      setError("");
+      setFile(null);
+    } catch {
+      setError(
+        imported
+          ? `Import interrompu après ${imported} produit(s). Les lots déjà enregistrés sont conservés.`
+          : "L’import a échoué. Réessaie.",
+      );
+    } finally {
+      setIsPending(false);
+      setImportProgress(null);
+    }
+  }
+
   return (
-    <div className="csv-import">
+    <section className="csv-import" aria-labelledby="csv-import-title">
+      <h2 id="csv-import-title">Importer un catalogue CSV</h2>
       <div className="csv-actions">
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            handleDownloadTemplate();
-          }}
+        <button
           className="ui-button ui-button--secondary ui-button--sm"
+          onClick={downloadCsvTemplate}
+          type="button"
         >
           Télécharger le modèle CSV
-        </a>
+        </button>
         <label className="ui-button ui-button--primary ui-button--sm">
           Choisir un fichier CSV
           <input
-            type="file"
-            accept=".csv"
+            accept=".csv,text/csv"
             onChange={handleFileChange}
-            style={{ display: "none" }}
+            type="file"
           />
         </label>
-        {file && (
+        {file ? (
           <button
             className="ui-button ui-button--secondary ui-button--sm"
-            onClick={handleParse}
             disabled={isPending}
+            onClick={() => void previewFile()}
+            type="button"
           >
             Aperçu des lignes
           </button>
-        )}
+        ) : null}
       </div>
 
-      {error && (
-        <p className="csv-error" role="alert">{error}</p>
-      )}
-
-      {file && !result && (
+      {file ? (
         <p>
           Fichier sélectionné : <strong>{file.name}</strong>
         </p>
-      )}
+      ) : null}
+      {error ? (
+        <p className="csv-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {message ? (
+        <p className="catalog-message" role="status">
+          {message}
+        </p>
+      ) : null}
+      {isPending && result ? (
+        <p role="status">
+          Importation : {importProgress ?? 0}/{result.validRows.length}{" "}
+          produit(s).
+        </p>
+      ) : null}
 
-      {result && (
+      {result ? (
         <div className="csv-preview">
           <h3>Résultat de l’analyse</h3>
           <div className="csv-stats">
             <Badge tone="success">
-              {result.validCount} ligne(s) valide(s)
+              {result.validRows.length} ligne(s) valide(s)
             </Badge>
-            {result.invalidCount > 0 && (
+            {result.invalidRows.length ? (
               <Badge tone="warning">
-                {result.invalidCount} ligne(s) invalide(s)
+                {result.invalidRows.length} ligne(s) à corriger
               </Badge>
-            )}
+            ) : null}
           </div>
-
-          {result.invalidRows.length > 0 && (
+          {result.invalidRows.length ? (
             <div className="csv-invalid-table">
               <h4>Lignes à corriger</h4>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Ligne</th>
-                    <th>Nom</th>
-                    <th>Erreurs</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.invalidRows.map((invalid) => (
-                    <tr key={`${invalid.rowIndex}-${invalid.row.name}`}>
-                      <td>{invalid.rowIndex}</td>
-                      <td>{invalid.row.name || "(vide)"}</td>
-                      <td>{invalid.errors.join(", ")}</td>
+              <div className="catalog-csv-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Ligne</th>
+                      <th>Nom</th>
+                      <th>Erreurs</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {result.invalidRows.map((invalid) => (
+                      <tr key={`${invalid.rowIndex}-${invalid.row.name}`}>
+                        <td>{invalid.rowIndex}</td>
+                        <td>{invalid.row.name || "(vide)"}</td>
+                        <td>{invalid.errors.join(", ")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          )}
-
-          {result.validCount > 0 && (
+          ) : null}
+          {result.validRows.length ? (
             <button
               className="ui-button ui-button--primary"
-              onClick={handleImport}
               disabled={isPending}
+              onClick={() => void importFile()}
+              type="button"
             >
               {isPending ? "Importation…" : "Importer les produits valides"}
             </button>
-          )}
+          ) : null}
         </div>
-      )}
-    </div>
+      ) : null}
+    </section>
   );
-}
-    } catch {
-      setError("L’import a échoué.");
-    } finally {
-      setIsPending(false);
-    }
-  };
-  });
 }

@@ -398,6 +398,92 @@ export type Database = {
           },
         ];
       };
+      guest_cart_items: {
+        Row: {
+          cart_id: string;
+          id: string;
+          product_id: string;
+          quantity: number;
+          shop_id: string;
+          variant_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          cart_id: string;
+          id?: string;
+          product_id: string;
+          quantity: number;
+          shop_id: string;
+          variant_id?: string | null;
+        };
+        Update: {
+          cart_id?: string;
+          id?: string;
+          product_id?: string;
+          quantity?: number;
+          shop_id?: string;
+          variant_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "guest_cart_items_cart_id_shop_id_fkey";
+            columns: ["cart_id", "shop_id"];
+            isOneToOne: false;
+            referencedRelation: "guest_carts";
+            referencedColumns: ["id", "shop_id"];
+          },
+          {
+            foreignKeyName: "guest_cart_items_product_id_shop_id_fkey";
+            columns: ["product_id", "shop_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id", "shop_id"];
+          },
+          {
+            foreignKeyName: "guest_cart_items_variant_id_shop_id_fkey";
+            columns: ["variant_id", "shop_id"];
+            isOneToOne: false;
+            referencedRelation: "product_variants";
+            referencedColumns: ["id", "shop_id"];
+          },
+        ];
+      };
+      guest_carts: {
+        Row: {
+          created_at: string;
+          expires_at: string;
+          id: string;
+          shop_id: string;
+          token_hash: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          shop_id: string;
+          token_hash: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          shop_id?: string;
+          token_hash?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "guest_carts_shop_id_fkey";
+            columns: ["shop_id"];
+            isOneToOne: false;
+            referencedRelation: "shops";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       invoices: {
         Row: {
           amount: number;
@@ -459,6 +545,70 @@ export type Database = {
           },
         ];
       };
+      notification_email_jobs: {
+        Row: {
+          attempts: number;
+          available_at: string;
+          created_at: string;
+          id: string;
+          last_error: string | null;
+          notification_id: string;
+          sent_at: string | null;
+          status: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          attempts?: number;
+          available_at?: string;
+          created_at?: string;
+          id?: string;
+          last_error?: string | null;
+          notification_id: string;
+          sent_at?: string | null;
+          status?: string;
+          user_id: string;
+        };
+        Update: {
+          attempts?: number;
+          available_at?: string;
+          created_at?: string;
+          id?: string;
+          last_error?: string | null;
+          notification_id?: string;
+          sent_at?: string | null;
+          status?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notification_email_jobs_notification_id_fkey";
+            columns: ["notification_id"];
+            isOneToOne: true;
+            referencedRelation: "notifications";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notification_email_preferences: {
+        Row: {
+          nonessential_opt_out: boolean;
+          updated_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          nonessential_opt_out?: boolean;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          nonessential_opt_out?: boolean;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       notifications: {
         Row: {
           created_at: string;
@@ -486,6 +636,57 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [];
+      };
+      order_cancellation_requests: {
+        Row: {
+          customer_id: string;
+          customer_note: string | null;
+          id: string;
+          order_id: string;
+          refund_reference: string | null;
+          requested_at: string;
+          resolution_note: string | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          shop_id: string;
+          status: Database["public"]["Enums"]["order_cancellation_request_status"];
+        };
+        ComputedFields: never;
+        Insert: {
+          customer_id: string;
+          customer_note?: string | null;
+          id?: string;
+          order_id: string;
+          refund_reference?: string | null;
+          requested_at?: string;
+          resolution_note?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          shop_id: string;
+          status?: Database["public"]["Enums"]["order_cancellation_request_status"];
+        };
+        Update: {
+          customer_id?: string;
+          customer_note?: string | null;
+          id?: string;
+          order_id?: string;
+          refund_reference?: string | null;
+          requested_at?: string;
+          resolution_note?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          shop_id?: string;
+          status?: Database["public"]["Enums"]["order_cancellation_request_status"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_cancellation_requests_order_id_shop_id_fkey";
+            columns: ["order_id", "shop_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id", "shop_id"];
+          },
+        ];
       };
       order_items: {
         Row: {
@@ -1107,6 +1308,42 @@ export type Database = {
           },
         ];
       };
+      service_images: {
+        Row: {
+          created_at: string;
+          id: string;
+          path: string;
+          position: number;
+          service_id: string;
+          shop_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          id?: string;
+          path: string;
+          position?: number;
+          service_id: string;
+          shop_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          path?: string;
+          position?: number;
+          service_id?: string;
+          shop_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "service_images_service_id_shop_id_fkey";
+            columns: ["service_id", "shop_id"];
+            isOneToOne: false;
+            referencedRelation: "services";
+            referencedColumns: ["id", "shop_id"];
+          },
+        ];
+      };
       services: {
         Row: {
           active: boolean;
@@ -1154,6 +1391,57 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "services_shop_id_fkey";
+            columns: ["shop_id"];
+            isOneToOne: false;
+            referencedRelation: "shops";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      shop_invitations: {
+        Row: {
+          accepted_at: string | null;
+          created_at: string;
+          created_by: string;
+          email: string;
+          expires_at: string;
+          id: string;
+          permissions: NonNullable<Json>;
+          revoked_at: string | null;
+          shop_id: string;
+          status: string;
+          token_hash: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          accepted_at?: string | null;
+          created_at?: string;
+          created_by: string;
+          email: string;
+          expires_at?: string;
+          id?: string;
+          permissions?: NonNullable<Json>;
+          revoked_at?: string | null;
+          shop_id: string;
+          status?: string;
+          token_hash: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          created_at?: string;
+          created_by?: string;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          permissions?: NonNullable<Json>;
+          revoked_at?: string | null;
+          shop_id?: string;
+          status?: string;
+          token_hash?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shop_invitations_shop_id_fkey";
             columns: ["shop_id"];
             isOneToOne: false;
             referencedRelation: "shops";
@@ -1560,6 +1848,20 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_shop_invitation: {
+        Args: { p_token_hash: string };
+        Returns: string;
+      };
+      add_cart_item: {
+        Args: {
+          p_guest_token?: string;
+          p_product: string;
+          p_quantity?: number;
+          p_shop: string;
+          p_variant?: string;
+        };
+        Returns: string;
+      };
       book_slot: {
         Args: {
           p_note?: string;
@@ -1589,6 +1891,15 @@ export type Database = {
         };
         Returns: string;
       };
+      create_shop_invitation: {
+        Args: {
+          p_email: string;
+          p_permissions: Json;
+          p_shop: string;
+          p_token_hash: string;
+        };
+        Returns: string;
+      };
       declare_payment: {
         Args: {
           p_order_id: string;
@@ -1606,6 +1917,49 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: number;
       };
+      get_cart_snapshot: {
+        Args: { p_guest_token?: string; p_shop: string };
+        Returns: {
+          can_order: boolean;
+          cart_id: string;
+          item_id: string;
+          product_id: string;
+          product_name: string;
+          quantity: number;
+          status: string;
+          stock_limited: boolean;
+          unit_price: number;
+          variant_id: string;
+          variant_name: string;
+        }[];
+      };
+      import_catalog_product_batch: {
+        Args: { p_products: Json; p_shop: string };
+        Returns: number;
+      };
+      list_shop_invitations: {
+        Args: { p_shop: string };
+        Returns: {
+          created_at: string;
+          email: string;
+          expires_at: string;
+          id: string;
+          is_expired: boolean;
+          permissions: Json;
+          status: string;
+        }[];
+      };
+      list_shop_team: {
+        Args: { p_shop: string };
+        Returns: {
+          email: string;
+          full_name: string;
+          permissions: Json;
+          role: Database["public"]["Enums"]["shop_role"];
+          user_id: string;
+        }[];
+      };
+      merge_guest_carts: { Args: { p_guest_token: string }; Returns: number };
       moderate_review: {
         Args: {
           p_review_id: string;
@@ -1613,12 +1967,55 @@ export type Database = {
         };
         Returns: undefined;
       };
+      preview_order: {
+        Args: {
+          p_cart_id: string;
+          p_coupon_code: string;
+          p_fulfillment: Database["public"]["Enums"]["fulfillment_type"];
+          p_payment_method: Database["public"]["Enums"]["payment_method_type"];
+        };
+        Returns: {
+          discount: number;
+          errors: string[];
+          subtotal: number;
+          total: number;
+        }[];
+      };
+      remove_cart_item: {
+        Args: { p_guest_token?: string; p_item: string; p_shop: string };
+        Returns: undefined;
+      };
+      remove_shop_staff: {
+        Args: { p_shop: string; p_user: string };
+        Returns: undefined;
+      };
       reply_to_review: {
         Args: { p_reply: string; p_review_id: string };
         Returns: undefined;
       };
+      request_order_cancellation: {
+        Args: { p_customer_note?: string; p_order_id: string };
+        Returns: string;
+      };
+      resolve_order_cancellation_request: {
+        Args: {
+          p_note?: string;
+          p_refund_reference?: string;
+          p_request_id: string;
+          p_resolution: string;
+        };
+        Returns: undefined;
+      };
       review_shop: {
         Args: { p_approve: boolean; p_reason?: string; p_shop: string };
+        Returns: undefined;
+      };
+      revoke_shop_invitation: {
+        Args: { p_invitation: string; p_shop: string };
+        Returns: undefined;
+      };
+      rotate_shop_invitation_token: {
+        Args: { p_invitation: string; p_shop: string; p_token_hash: string };
         Returns: undefined;
       };
       save_catalog_product: {
@@ -1640,15 +2037,45 @@ export type Database = {
         };
         Returns: string;
       };
+      save_onboarding_payment_methods: {
+        Args: { p_methods: Json; p_shop: string };
+        Returns: undefined;
+      };
       search_catalog_products: {
         Args: { p_query: string; p_shop: string };
         Returns: string[];
+      };
+      search_public_storefront_products: {
+        Args: { p_category?: string; p_query: string; p_shop: string };
+        Returns: {
+          category_id: string;
+          compare_at_price: number;
+          description: string;
+          id: string;
+          item_type: string;
+          name: string;
+          price: number;
+          status: string;
+        }[];
+      };
+      seed_catalog_samples: {
+        Args: { p_catalog: Json; p_shop: string };
+        Returns: undefined;
       };
       set_booking_status: {
         Args: {
           p_booking_id: string;
           p_reason?: string;
           p_to: Database["public"]["Enums"]["booking_status"];
+        };
+        Returns: undefined;
+      };
+      set_cart_item_quantity: {
+        Args: {
+          p_guest_token?: string;
+          p_item: string;
+          p_quantity: number;
+          p_shop: string;
         };
         Returns: undefined;
       };
@@ -1665,6 +2092,7 @@ export type Database = {
         Args: { p_reason?: string; p_shop: string; p_suspended: boolean };
         Returns: undefined;
       };
+      shop_staff_limit: { Args: { p_shop: string }; Returns: number };
       submit_shop_for_review: { Args: { p_shop: string }; Returns: undefined };
       transition_order: {
         Args: {
@@ -1673,6 +2101,10 @@ export type Database = {
           p_reference?: string;
           p_to: Database["public"]["Enums"]["order_status"];
         };
+        Returns: undefined;
+      };
+      update_shop_member_permissions: {
+        Args: { p_permissions: Json; p_shop: string; p_user: string };
         Returns: undefined;
       };
     };
@@ -1685,6 +2117,8 @@ export type Database = {
       declaration_status: "declared" | "confirmed" | "rejected";
       fulfillment_type: "pickup" | "delivery";
       invoice_status: "open" | "paid" | "void";
+      order_cancellation_request_status:
+        "pending" | "refunded" | "cancelled" | "rejected";
       order_status:
         | "pending_payment"
         | "payment_declared"
@@ -1854,6 +2288,12 @@ export const Constants = {
       declaration_status: ["declared", "confirmed", "rejected"],
       fulfillment_type: ["pickup", "delivery"],
       invoice_status: ["open", "paid", "void"],
+      order_cancellation_request_status: [
+        "pending",
+        "refunded",
+        "cancelled",
+        "rejected",
+      ],
       order_status: [
         "pending_payment",
         "payment_declared",

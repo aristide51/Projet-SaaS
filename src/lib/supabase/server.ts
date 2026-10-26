@@ -53,8 +53,22 @@ export async function createClient() {
 }
 
 export async function getUser() {
+  const user = await getOptionalUser();
+
+  if (!user) {
+    throw new Error("Impossible de récupérer l’utilisateur connecté.");
+  }
+
+  return user;
+}
+
+export async function getOptionalUser() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
+
+  if (error?.name === "AuthSessionMissingError") {
+    return null;
+  }
 
   if (error) {
     throw new Error("Impossible de récupérer l’utilisateur connecté.", {
@@ -63,4 +77,17 @@ export async function getUser() {
   }
 
   return data.user;
+}
+
+export async function getSessionUser() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error) {
+    throw new Error("Impossible de lire la session de l’utilisateur.", {
+      cause: error,
+    });
+  }
+
+  return data.session?.user ?? null;
 }

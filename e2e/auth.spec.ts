@@ -23,6 +23,10 @@ test("inscription confirmée, connexion et absence de jeton dans le stockage nav
   await registerAndConfirm(page, request, email, password);
   await expect(page).toHaveURL(/\/account$/);
   await expect(page.getByRole("heading", { name: "Bienvenue" })).toBeVisible();
+  await page.getByRole("button", { name: "Notifications" }).click();
+  await expect(
+    page.getByRole("region", { name: "Centre de notifications" }),
+  ).toContainText("Tu n’as pas encore de notification.");
 
   const storedAuthKeys = await page.evaluate(() =>
     Object.keys(localStorage).filter((key) => /auth|token|supabase/i.test(key)),
@@ -108,8 +112,11 @@ test("ajout d’un produit avec photo convertie en WebP", async ({
   await expect(page).toHaveURL(/\/dashboard\/onboarding\?shop=[\da-f-]+$/);
   await page.goto("/dashboard/catalog");
 
-  await page.getByLabel("Nom du produit").fill("Test pneu catalogue");
-  await page.getByLabel("Prix (FCFA)").fill("12500");
+  const productForm = page
+    .locator("form")
+    .filter({ has: page.getByLabel("Nom du produit") });
+  await productForm.getByLabel("Nom du produit").fill("Test pneu catalogue");
+  await productForm.getByLabel("Prix (FCFA)").fill("12500");
   const pngDataUrl = await page.evaluate(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 2;
@@ -120,7 +127,7 @@ test("ajout d’un produit avec photo convertie en WebP", async ({
     context.fillRect(0, 0, 2, 2);
     return canvas.toDataURL("image/png").split(",")[1];
   });
-  await page.getByLabel(/Photos/).setInputFiles({
+  await productForm.getByLabel(/Photos/).setInputFiles({
     name: "test-catalogue.png",
     mimeType: "image/png",
     buffer: Buffer.from(pngDataUrl ?? "", "base64"),
@@ -135,6 +142,167 @@ test("ajout d’un produit avec photo convertie en WebP", async ({
     .filter({ hasText: "Test pneu catalogue" });
   await expect(product).toBeVisible();
   await expect(product.locator("img")).toBeVisible();
+});
+
+test("aperçu CSV de 500 lignes et exemples publiables après modification", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(240_000);
+  await registerAndConfirm(page, request, uniqueEmail(), "Burkina!2026Samples");
+
+  await page.goto("/dashboard/onboarding");
+  await page.getByRole("button", { name: "Commencer" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/onboarding\?shop=[\da-f-]+$/);
+  const shopId = new URL(page.url()).searchParams.get("shop");
+  if (!shopId) throw new Error("La boutique de test n’a pas été créée.");
+
+  await page.goto(`/dashboard/catalog/import?shop=${shopId}`);
+  const csv = [
+    "name,price",
+    ...Array.from({ length: 500 }, (_, index) => `Produit ${index + 1},1000`),
+  ].join("\n");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "catalogue-500.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv),
+  });
+  await page.getByRole("button", { name: "Aperçu des lignes" }).click();
+  await expect(
+    page.getByText("500 ligne(s) valide(s)", { exact: true }),
+  ).toBeVisible({ timeout: 15_000 });
+
+  await page.goto(`/dashboard/catalog?shop=${shopId}`);
+  await page.getByLabel("Type de commerce").selectOption("garage");
+  await page.getByRole("button", { name: "Ajouter les exemples" }).click();
+  await expect(page.getByRole("status")).toContainText("Exemples ajoutés.", {
+    timeout: 20_000,
+  });
+
+  const sampleProduct = page
+    .getByRole("listitem")
+    .filter({ hasText: "Pneu 175/65 R14" });
+  await expect(sampleProduct.getByText("Exemple")).toBeVisible();
+  await sampleProduct.getByRole("button", { name: "Modifier" }).click();
+  const productForm = page
+    .locator("form")
+    .filter({ has: page.getByLabel("Nom du produit") });
+  await productForm
+    .getByLabel("Nom du produit")
+    .fill("Pneu 175/65 R14 modifié");
+  await productForm
+    .getByRole("button", { name: "Enregistrer le produit" })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Produit mis à jour.", {
+    timeout: 20_000,
+  });
+
+  const editedProduct = page
+    .getByRole("listitem")
+    .filter({ hasText: "Pneu 175/65 R14 modifié" });
+  await expect(editedProduct).toBeVisible();
+  await expect(editedProduct.getByText("Exemple")).toHaveCount(0);
+});
+
+test("parcours commerçant en huit étapes jusqu’à la soumission", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(540_000);
+  const startedAt = Date.now();
+  await registerAndConfirm(
+    page,
+    request,
+    uniqueEmail(),
+    "Burkina!2026Onboarding",
+  );
+
+  await page.goto("/dashboard/onboarding");
+  await page.getByRole("button", { name: "Commencer" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/onboarding\?shop=[\da-f-]+$/, {
+    timeout: 30_000,
+  });
+  const shopId = new URL(page.url()).searchParams.get("shop");
+  if (!shopId) throw new Error("La boutique de test n’a pas été créée.");
+  const shopSlug = `quincaillerie-${shopId.slice(0, 8)}`;
+
+  await page.getByRole("button", { name: "Quincaillerie" }).click();
+  await page.getByRole("button", { name: "Continuer" }).click();
+  await page.getByLabel("Nom de la boutique").fill("Quincaillerie E2E");
+  await page.getByLabel("Adresse de la boutique").fill(shopSlug);
+  await expect(
+    page
+      .getByRole("region", { name: "Donne une identité à ta boutique" })
+      .getByRole("status"),
+  ).toContainText("Adresse disponible.", { timeout: 15_000 });
+  await page.getByRole("button", { name: "Continuer" }).click();
+  await page.getByLabel("WhatsApp").fill("+22670123456");
+  await page.getByLabel("Téléphone du commerce").fill("+22670123456");
+  await page.getByLabel("Ville").fill("Ouagadougou");
+  await page.getByLabel("Quartier").fill("Koulouba");
+  await page.getByRole("button", { name: "Continuer" }).click();
+  await page
+    .getByRole("button", { name: "Enregistrer et terminer cette partie" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Ajoute tes premiers articles" }),
+  ).toBeVisible();
+  await expect(page.locator(".onboarding-save-status")).toHaveText(
+    "Enregistré",
+    { timeout: 15_000 },
+  );
+
+  await page.getByRole("link", { name: "Gérer mon catalogue" }).click();
+  const productForm = page
+    .locator("form")
+    .filter({ has: page.getByLabel("Nom du produit") });
+  await productForm.getByLabel("Nom du produit").fill("Marteau E2E");
+  await productForm.getByLabel("Prix (FCFA)").fill("5000");
+  await page.getByRole("button", { name: "Ajouter le produit" }).click();
+  await expect(page.getByRole("status")).toContainText("Produit ajouté.", {
+    timeout: 20_000,
+  });
+
+  await page.goto(`/dashboard/onboarding?shop=${shopId}`);
+  await expect(
+    page.getByRole("heading", { name: "Ajoute tes premiers articles" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Continuer" }).click();
+  await page.getByLabel("Paiement à la livraison").check();
+  await page.getByLabel("Paiement au retrait").check();
+  await page.getByRole("button", { name: "Enregistrer et continuer" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Vérifie ta vitrine" }),
+  ).toBeVisible();
+
+  const preview = page.waitForEvent("popup");
+  await page.getByRole("link", { name: "Ouvrir l’aperçu privé" }).click();
+  const previewPage = await preview;
+  await expect(
+    previewPage.getByRole("heading", { name: "Aperçu, pas encore publié" }),
+  ).toBeVisible();
+  await expect(
+    previewPage
+      .getByRole("region", { name: "Aperçu sur téléphone" })
+      .getByRole("heading", { name: "Marteau E2E" }),
+  ).toBeVisible();
+  await expect(
+    previewPage
+      .getByRole("region", { name: "Aperçu sur ordinateur" })
+      .getByRole("heading", { name: "Marteau E2E" }),
+  ).toBeVisible();
+  await previewPage.close();
+
+  await page
+    .getByRole("button", { name: "Continuer vers la soumission" })
+    .click();
+  await page.getByRole("button", { name: "Soumettre pour validation" }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: "Ta boutique est en attente de validation",
+    }),
+  ).toBeVisible({ timeout: 20_000 });
+  expect(Date.now() - startedAt).toBeLessThan(540_000);
 });
 
 test("un visiteur sans session est redirigé hors du tableau de bord", async ({

@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { createClient, getUser } = vi.hoisted(() => ({
+const { createClient, getUser, revalidatePublicShop } = vi.hoisted(() => ({
   createClient: vi.fn(),
   getUser: vi.fn(),
+  revalidatePublicShop: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -16,6 +17,10 @@ vi.mock("@/lib/monitoring/sentry", () => ({
 
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
+}));
+
+vi.mock("@/features/storefront/cache", () => ({
+  revalidatePublicShop,
 }));
 
 import { saveProduct } from "./actions";
@@ -123,6 +128,7 @@ describe("catalog server actions", () => {
         variants: [],
       },
     });
+    expect(revalidatePublicShop).toHaveBeenCalledWith(shopId);
   });
 
   it("returns the plan-limit message from the database constraint", async () => {

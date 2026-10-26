@@ -1,0 +1,43 @@
+{
+  "shopType": "hardware",
+  "title": "Matériaux, outils et équipements",
+  "products": [
+    {
+      "name": "Marteau de charpentier",
+      "description": "Marteau à griffe avec manche en bois.",
+      "price": 6500,
+      "compare_at_price": null,
+      "sku": null,
+      "compatibility": null,
+      "stock": null,
+      "status": "available",
+      "category_name": "Outillage",
+      "variant_name": null,
+      "variant_price": null,
+      "variant_stock": null
+    },
+    {
+      "name": "Paquet de clous",
+      "description": "Clous galvanisés pour charpente.",
+      "price": 3200,
+      "compare_at_price": null,
+      "sku": null,
+      "compatibility": null,
+      "stock": null,
+      "status": "available",
+      "category_name": "Fixation",
+      "variant_name": null,
+      "variant_price": null,
+      "variant_stock": null
+    }
+  ],
+  "services": [
+    {
+      "name": "Découpe de bois sur mesure",
+      "description": "Découpe de planches selon vos dimensions.",
+      "duration_min": 30,
+      "price": 3000,
+      "deposit_amount": 0
+    }
+  ]
+}

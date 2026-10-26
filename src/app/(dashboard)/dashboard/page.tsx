@@ -19,6 +19,15 @@ export default function DashboardPage() {
         >
           Gérer le catalogue
         </Link>
+        <Link
+          className="ui-button ui-button--secondary"
+          href="/dashboard/orders"
+        >
+          Gérer les commandes
+        </Link>
+        <Link className="ui-button ui-button--secondary" href="/dashboard/team">
+          Gérer mon équipe
+        </Link>
       </section>
     </main>
   );

@@ -3,18 +3,19 @@ import {
   createDefaultDraft,
   addStepMetrics,
   hasCompleteOpeningHours,
+  onboardingPaymentMethodsSchema,
   onboardingDraftSchema,
   saveOnboardingSchema,
   validPhoneSchema,
 } from "./schemas";
 
 describe("onboardingDraftSchema", () => {
-  it("accepts a complete draft and a valid eight-step checkpoint", () => {
+  it("accepts a complete draft and checkpoints through all eight steps", () => {
     const draft = createDefaultDraft("boutique-abc123");
 
     expect(onboardingDraftSchema.safeParse(draft).success).toBe(true);
     expect(
-      saveOnboardingSchema.safeParse({ currentStep: 5, draft }).success,
+      saveOnboardingSchema.safeParse({ currentStep: 8, draft }).success,
     ).toBe(true);
   });
 
@@ -28,6 +29,34 @@ describe("onboardingDraftSchema", () => {
       onboardingDraftSchema.safeParse({ ...draft, lat: 120 }).success,
     ).toBe(false);
     expect(validPhoneSchema.safeParse("not-a-number").success).toBe(false);
+  });
+
+  it("validates payment methods and rejects duplicate or malformed providers", () => {
+    expect(
+      onboardingPaymentMethodsSchema.safeParse([
+        {
+          type: "ussd_orange",
+          phone: "70123456",
+          ussdTemplate: "*144#",
+        },
+        { type: "pay_at_pickup" },
+      ]).success,
+    ).toBe(true);
+    expect(
+      onboardingPaymentMethodsSchema.safeParse([
+        {
+          type: "ussd_moov",
+          phone: "123",
+          ussdTemplate: "*555#",
+        },
+      ]).success,
+    ).toBe(false);
+    expect(
+      onboardingPaymentMethodsSchema.safeParse([
+        { type: "pay_at_pickup" },
+        { type: "pay_at_pickup" },
+      ]).success,
+    ).toBe(false);
   });
 
   it("accepts an incomplete draft but validates time fields when present", () => {

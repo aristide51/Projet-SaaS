@@ -2,12 +2,16 @@
 
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FormField, Input } from "@/components/ui/primitives";
 import {
   checkShopSlugAvailability,
   removeShopLogo,
   saveOnboardingDraft,
+  saveOnboardingPaymentMethods,
+  submitShopForReview,
   uploadShopLogo,
 } from "./actions";
 import {
@@ -18,7 +22,7 @@ import {
 import {
   useNetworkStatus,
   useOnboardingSnapshot,
-  writeOnboardingSnapshot,
+  updateOnboardingSnapshot,
   type OnboardingSnapshot,
 } from "./local-draft";
 import {
@@ -26,6 +30,7 @@ import {
   hasCompleteOpeningHours,
   type OnboardingCategory,
   type OnboardingDraft,
+  type OnboardingPaymentMethod,
   validPhoneSchema,
   validShopSlugSchema,
 } from "./schemas";
@@ -99,11 +104,33 @@ type OnboardingWizardProps = {
   draft: OnboardingDraft;
   currentStep: number;
   serverUpdatedAt: number;
+  catalogCount: number;
+  paymentMethods: PaymentMethodRow[];
+  rejectionReason: string | null;
 };
 
 type SaveStatus = "saved" | "saving" | "offline" | "error";
 type SlugStatus =
   "idle" | "checking" | "available" | "taken" | "invalid" | "error";
+type PaymentMethodType =
+  | "ussd_orange"
+  | "ussd_moov"
+  | "ussd_coris"
+  | "cash_on_delivery"
+  | "pay_at_pickup"
+  | "aggregator";
+type PaymentMethodRow = {
+  type: PaymentMethodType;
+  phone_or_code: string | null;
+  ussd_template: string | null;
+  active: boolean;
+};
+type PaymentSetupDraft = {
+  ussd_orange: { enabled: boolean; phone: string; ussdTemplate: string };
+  ussd_moov: { enabled: boolean; phone: string; ussdTemplate: string };
+  cash_on_delivery: boolean;
+  pay_at_pickup: boolean;
+};
 
 export function OnboardingWizard({
   shopId,
@@ -111,12 +138,19 @@ export function OnboardingWizard({
   draft: initialDraft,
   currentStep: initialStep,
   serverUpdatedAt,
+  catalogCount,
+  paymentMethods: initialPaymentMethods,
+  rejectionReason,
 }: OnboardingWizardProps) {
-  const serverSnapshot: OnboardingSnapshot = {
-    currentStep: initialStep,
-    draft: initialDraft,
-    serverUpdatedAt,
-  };
+  const router = useRouter();
+  const serverSnapshot = useMemo<OnboardingSnapshot>(
+    () => ({
+      currentStep: initialStep,
+      draft: initialDraft,
+      serverUpdatedAt,
+    }),
+    [initialDraft, initialStep, serverUpdatedAt],
+  );
   const snapshot = useOnboardingSnapshot(shopId, serverSnapshot);
   const isOnline = useNetworkStatus();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>(
@@ -131,25 +165,33 @@ export function OnboardingWizard({
   const [slugIsManual, setSlugIsManual] = useState(false);
   const [slugCheckRetry, setSlugCheckRetry] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [paymentSetup, setPaymentSetup] = useState<PaymentSetupDraft>(() =>
+    createPaymentSetupDraft(initialPaymentMethods),
+  );
+  const [paymentBusy, setPaymentBusy] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentMessage, setPaymentMessage] = useState("");
+  const [submitBusy, setSubmitBusy] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const stepStartedAt = useRef(0);
   const uploadInProgress = useRef(false);
 
   const commitSnapshot = useCallback(
     (change: (previous: OnboardingSnapshot) => OnboardingSnapshot) => {
-      const next = change(snapshot);
-
       try {
-        writeOnboardingSnapshot(shopId, next);
+        const next = updateOnboardingSnapshot(shopId, change);
         setSaveStatus(isOnline ? "saving" : "offline");
         setSaveMessage("");
+        return next;
       } catch {
         setSaveStatus("error");
         setSaveMessage(
           "Le brouillon local n’a pas pu être sauvegardé. Vérifie l’espace disponible sur cet appareil.",
         );
+        return null;
       }
     },
-    [isOnline, shopId, snapshot],
+    [isOnline, shopId],
   );
 
   const updateDraft = useCallback(
@@ -173,12 +215,13 @@ export function OnboardingWizard({
       }
 
       const elapsedMs = Math.max(0, Date.now() - stepStartedAt.current);
-      const next = addStepTime(snapshot, step, elapsedMs, abandoned);
-      commitSnapshot(() => next);
+      const next = commitSnapshot((previous) =>
+        addStepTime(previous, step, elapsedMs, abandoned),
+      );
       stepStartedAt.current = Date.now();
       return next;
     },
-    [commitSnapshot, snapshot],
+    [commitSnapshot],
   );
 
   useEffect(() => {
@@ -336,7 +379,7 @@ export function OnboardingWizard({
 
   const activeStep = snapshot.currentStep;
   const visibleSaveStatus: SaveStatus = isOnline ? saveStatus : "offline";
-  const completion = Math.round((Math.min(activeStep - 1, 4) / 8) * 100);
+  const completion = Math.round(((activeStep - 1) / 8) * 100);
   const publicLogoUrl =
     previewUrl ??
     (snapshot.draft.logoPath
@@ -347,13 +390,13 @@ export function OnboardingWizard({
     "",
   );
   const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
-  const helpStep = Math.min(activeStep, 4);
+  const helpStep = activeStep;
   const helpMessage = encodeURIComponent(
     `Bonjour, j’ai besoin d’aide pour ma boutique ${shopId}, étape ${helpStep} : ${STEPS[helpStep - 1]}.`,
   );
 
   function changeStep(step: number) {
-    if (step < 1 || step > 4 || step === snapshot.currentStep) {
+    if (step < 1 || step > 8 || step === snapshot.currentStep) {
       return;
     }
 
@@ -376,22 +419,64 @@ export function OnboardingWizard({
   }
 
   function nextStep() {
-    if (snapshot.currentStep < 4) {
+    if (snapshot.currentStep < 8) {
       changeStep(snapshot.currentStep + 1);
-      return;
+    }
+  }
+
+  function setUssdPayment(
+    type: "ussd_orange" | "ussd_moov",
+    patch: Partial<PaymentSetupDraft[typeof type]>,
+  ) {
+    setPaymentSetup((previous) => ({
+      ...previous,
+      [type]: { ...previous[type], ...patch },
+    }));
+  }
+
+  async function savePaymentMethods() {
+    setPaymentBusy(true);
+    setPaymentError("");
+    setPaymentMessage("");
+    const methods: OnboardingPaymentMethod[] = [];
+    for (const type of ["ussd_orange", "ussd_moov"] as const) {
+      const selected = paymentSetup[type];
+      if (selected.enabled) {
+        methods.push({
+          type,
+          phone: selected.phone,
+          ussdTemplate: selected.ussdTemplate,
+        });
+      }
+    }
+    if (paymentSetup.cash_on_delivery) {
+      methods.push({ type: "cash_on_delivery" });
+    }
+    if (paymentSetup.pay_at_pickup) {
+      methods.push({ type: "pay_at_pickup" });
     }
 
-    const elapsedMs = Math.max(0, Date.now() - stepStartedAt.current);
-    stepStartedAt.current = Date.now();
-    commitSnapshot((previous) => {
-      const updated = addStepTime(previous, 4, elapsedMs, false);
+    const result = await saveOnboardingPaymentMethods(shopId, methods);
+    setPaymentBusy(false);
+    if (!result.success) {
+      setPaymentError(result.message);
+      return;
+    }
+    setPaymentMessage(result.message);
+    router.refresh();
+    changeStep(7);
+  }
 
-      return {
-        ...updated,
-        currentStep: 5,
-        draft: { ...updated.draft, updatedAt: Date.now() },
-      };
-    });
+  async function submitForReview() {
+    setSubmitBusy(true);
+    setSubmitError("");
+    const result = await submitShopForReview(shopId);
+    setSubmitBusy(false);
+    if (!result.success) {
+      setSubmitError(result.message);
+      return;
+    }
+    router.refresh();
   }
 
   function updateCategory(category: OnboardingCategory) {
@@ -490,6 +575,12 @@ export function OnboardingWizard({
     });
   }
 
+  const selectedPaymentCount = [
+    paymentSetup.ussd_orange.enabled,
+    paymentSetup.ussd_moov.enabled,
+    paymentSetup.cash_on_delivery,
+    paymentSetup.pay_at_pickup,
+  ].filter(Boolean).length;
   const checklist = [
     { label: "Type de commerce choisi", complete: true },
     {
@@ -522,15 +613,24 @@ export function OnboardingWizard({
     },
     {
       label: "Au moins un produit ou service",
-      complete: false,
-      upcoming: true,
+      complete: catalogCount > 0,
     },
-    { label: "Un mode d’encaissement", complete: false, upcoming: true },
+    {
+      label: "Un mode d’encaissement",
+      complete:
+        selectedPaymentCount > 0 ||
+        initialPaymentMethods.some((method) => method.active),
+    },
   ];
 
   return (
     <main className="onboarding-shell">
       <section className="onboarding-card" aria-labelledby="onboarding-title">
+        {rejectionReason ? (
+          <p className="onboarding-review-rejection" role="alert">
+            La boutique n’a pas été approuvée : {rejectionReason}
+          </p>
+        ) : null}
         <header className="onboarding-header">
           <p className="auth-eyebrow">
             Mise en route · {snapshot.draft.name || shopName}
@@ -541,7 +641,7 @@ export function OnboardingWizard({
             <div className="onboarding-progress__label">
               <span>Progression</span>
               <span>
-                {completion}% · {Math.min(activeStep - 1, 4)} sur 8 étapes
+                {completion}% · étape {activeStep} sur 8
               </span>
             </div>
             <progress
@@ -556,14 +656,12 @@ export function OnboardingWizard({
           >
             {STEPS.map((label, index) => {
               const step = index + 1;
-              const available = step <= 4;
 
               return (
                 <button
                   aria-current={step === activeStep ? "step" : undefined}
-                  aria-label={`Étape ${step} : ${label}${available ? "" : " (bientôt disponible)"}`}
+                  aria-label={`Étape ${step} : ${label}`}
                   className={`onboarding-step ${step === activeStep ? "is-active" : ""} ${step < activeStep ? "is-complete" : ""}`}
-                  disabled={!available}
                   key={label}
                   onClick={() => changeStep(step)}
                   type="button"
@@ -970,8 +1068,8 @@ export function OnboardingWizard({
                 Ce qu’il reste avant la publication
               </h2>
               <p>
-                Tu pourras compléter les étapes suivantes après cette première
-                partie.
+                La checklist se met à jour avec tes coordonnées, ton catalogue
+                et tes modes d’encaissement.
               </p>
               <ul className="onboarding-checklist">
                 {checklist.map((item) => (
@@ -980,10 +1078,9 @@ export function OnboardingWizard({
                     key={item.label}
                   >
                     <span aria-hidden="true">
-                      {item.complete ? "✓" : item.upcoming ? "○" : "!"}
+                      {item.complete ? "✓" : "!"}
                     </span>
                     <span>{item.label}</span>
-                    {item.upcoming ? <small>Étape à venir</small> : null}
                   </li>
                 ))}
               </ul>
@@ -996,27 +1093,251 @@ export function OnboardingWizard({
             </section>
           ) : null}
 
-          {activeStep > 4 ? (
-            <section
-              aria-labelledby="onboarding-step-title"
-              className="onboarding-next-phase"
-            >
+          {activeStep === 5 ? (
+            <section aria-labelledby="onboarding-step-title">
               <p className="onboarding-step-kicker">Étape 5 sur 8</p>
-              <h2 id="onboarding-step-title">
-                Tes premières étapes sont enregistrées
-              </h2>
+              <h2 id="onboarding-step-title">Ajoute tes premiers articles</h2>
               <p>
-                Le brouillon de ta boutique est conservé. Les étapes 5 à 8
-                (catalogue, encaissement, prévisualisation et publication)
-                seront disponibles dans la suite du parcours.
+                Ajoute au moins un vrai produit ou service. Les exemples non
+                modifiés ne sont pas publiés et ne comptent pas ici.
               </p>
-              <button
-                className="ui-button ui-button--secondary"
-                onClick={() => changeStep(4)}
-                type="button"
-              >
-                Revoir ma checklist
-              </button>
+              <p className="onboarding-catalog-count" aria-live="polite">
+                {catalogCount} produit(s) ou service(s) prêt(s) à publier
+              </p>
+              <div className="onboarding-actions">
+                <Link
+                  className="ui-button ui-button--primary"
+                  href={`/dashboard/catalog?shop=${encodeURIComponent(shopId)}`}
+                >
+                  Gérer mon catalogue
+                </Link>
+                <Link
+                  className="ui-button ui-button--secondary"
+                  href={`/dashboard/catalog/import?shop=${encodeURIComponent(shopId)}`}
+                >
+                  Importer un fichier CSV
+                </Link>
+              </div>
+              <StepActions
+                onBack={() => changeStep(4)}
+                onNext={nextStep}
+                nextDisabled={catalogCount === 0}
+                nextLabel="Continuer"
+              />
+              {catalogCount === 0 ? (
+                <p className="onboarding-inline-error" role="status">
+                  Le bouton Continuer s’activera après l’ajout d’un produit ou
+                  service.
+                </p>
+              ) : null}
+            </section>
+          ) : null}
+
+          {activeStep === 6 ? (
+            <section aria-labelledby="onboarding-step-title">
+              <p className="onboarding-step-kicker">Étape 6 sur 8</p>
+              <h2 id="onboarding-step-title">Choisis tes modes d’encaissement</h2>
+              <p>
+                Les paiements mobiles sont vérifiés manuellement avec le code
+                USSD. N’ajoute pas de code secret ou de mot de passe.
+              </p>
+              <div className="onboarding-payment-options">
+                {(["ussd_orange", "ussd_moov"] as const).map((type) => {
+                  const provider = type === "ussd_orange" ? "Orange" : "Moov";
+                  const selected = paymentSetup[type];
+                  return (
+                    <fieldset className="onboarding-payment-option" key={type}>
+                      <legend>
+                        <label>
+                          <input
+                            checked={selected.enabled}
+                            onChange={(event) =>
+                              setUssdPayment(type, {
+                                enabled: event.target.checked,
+                              })
+                            }
+                            type="checkbox"
+                          />
+                          Paiement {provider} Money
+                        </label>
+                      </legend>
+                      {selected.enabled ? (
+                        <div className="onboarding-fields">
+                          <FormField
+                            hint="Numéro burkinabè à 8 chiffres, avec ou sans +226."
+                            label={`Numéro marchand ${provider}`}
+                            required
+                          >
+                            <Input
+                              autoComplete="tel"
+                              inputMode="tel"
+                              maxLength={13}
+                              onChange={(event) =>
+                                setUssdPayment(type, {
+                                  phone: event.target.value.replace(
+                                    /[^\d+]/g,
+                                    "",
+                                  ),
+                                })
+                              }
+                              value={selected.phone}
+                            />
+                          </FormField>
+                          <FormField
+                            hint="Saisis l’instruction USSD fournie par ton opérateur."
+                            label={`Code USSD ${provider}`}
+                            required
+                          >
+                            <Input
+                              maxLength={80}
+                              onChange={(event) =>
+                                setUssdPayment(type, {
+                                  ussdTemplate: event.target.value,
+                                })
+                              }
+                              value={selected.ussdTemplate}
+                            />
+                          </FormField>
+                        </div>
+                      ) : null}
+                    </fieldset>
+                  );
+                })}
+                <fieldset className="onboarding-payment-option">
+                  <legend>Espèces</legend>
+                  <label>
+                    <input
+                      checked={paymentSetup.cash_on_delivery}
+                      onChange={(event) =>
+                        setPaymentSetup((previous) => ({
+                          ...previous,
+                          cash_on_delivery: event.target.checked,
+                        }))
+                      }
+                      type="checkbox"
+                    />
+                    Paiement à la livraison
+                  </label>
+                  <label>
+                    <input
+                      checked={paymentSetup.pay_at_pickup}
+                      onChange={(event) =>
+                        setPaymentSetup((previous) => ({
+                          ...previous,
+                          pay_at_pickup: event.target.checked,
+                        }))
+                      }
+                      type="checkbox"
+                    />
+                    Paiement au retrait en boutique
+                  </label>
+                </fieldset>
+              </div>
+              {paymentError ? (
+                <p className="onboarding-inline-error" role="alert">
+                  {paymentError}
+                </p>
+              ) : null}
+              {paymentMessage ? (
+                <p className="onboarding-inline-status is-available" role="status">
+                  {paymentMessage}
+                </p>
+              ) : null}
+              <div className="onboarding-actions">
+                <button
+                  className="ui-button ui-button--secondary"
+                  onClick={() => changeStep(5)}
+                  type="button"
+                >
+                  Retour
+                </button>
+                <button
+                  className="ui-button ui-button--primary"
+                  disabled={paymentBusy}
+                  onClick={() => void savePaymentMethods()}
+                  type="button"
+                >
+                  {paymentBusy ? "Enregistrement…" : "Enregistrer et continuer"}
+                </button>
+              </div>
+            </section>
+          ) : null}
+
+          {activeStep === 7 ? (
+            <section aria-labelledby="onboarding-step-title">
+              <p className="onboarding-step-kicker">Étape 7 sur 8</p>
+              <h2 id="onboarding-step-title">Vérifie ta vitrine</h2>
+              <p>
+                L’aperçu est privé et n’est pas encore publié. Vérifie le rendu
+                sur téléphone et ordinateur avant de soumettre ta boutique.
+              </p>
+              <div className="onboarding-actions">
+                <Link
+                  className="ui-button ui-button--primary"
+                  href={`/dashboard/onboarding/preview?shop=${encodeURIComponent(shopId)}`}
+                  target="_blank"
+                >
+                  Ouvrir l’aperçu privé
+                </Link>
+                <button
+                  className="ui-button ui-button--secondary"
+                  onClick={() => changeStep(6)}
+                  type="button"
+                >
+                  Retour à l’encaissement
+                </button>
+                <button
+                  className="ui-button ui-button--secondary"
+                  onClick={nextStep}
+                  type="button"
+                >
+                  Continuer vers la soumission
+                </button>
+              </div>
+            </section>
+          ) : null}
+
+          {activeStep === 8 ? (
+            <section aria-labelledby="onboarding-step-title">
+              <p className="onboarding-step-kicker">Étape 8 sur 8</p>
+              <h2 id="onboarding-step-title">Soumets ta boutique</h2>
+              <p>
+                Un administrateur vérifiera ta boutique sous 24 heures. Elle
+                restera privée pendant l’examen.
+              </p>
+              <ul className="onboarding-checklist">
+                {checklist.map((item) => (
+                  <li
+                    className={item.complete ? "is-complete" : "is-missing"}
+                    key={item.label}
+                  >
+                    <span aria-hidden="true">{item.complete ? "✓" : "!"}</span>
+                    <span>{item.label}</span>
+                  </li>
+                ))}
+              </ul>
+              {submitError ? (
+                <p className="onboarding-inline-error" role="alert">
+                  {submitError}
+                </p>
+              ) : null}
+              <div className="onboarding-actions">
+                <button
+                  className="ui-button ui-button--secondary"
+                  onClick={() => changeStep(7)}
+                  type="button"
+                >
+                  Retour à l’aperçu
+                </button>
+                <button
+                  className="ui-button ui-button--primary"
+                  disabled={submitBusy}
+                  onClick={() => void submitForReview()}
+                  type="button"
+                >
+                  {submitBusy ? "Envoi…" : "Soumettre pour validation"}
+                </button>
+              </div>
             </section>
           ) : null}
         </div>
@@ -1137,6 +1458,31 @@ function parseCoordinate(value: string) {
 
   const coordinate = Number(value);
   return Number.isFinite(coordinate) ? coordinate : null;
+}
+
+function createPaymentSetupDraft(
+  methods: PaymentMethodRow[],
+): PaymentSetupDraft {
+  const orange = methods.find((method) => method.type === "ussd_orange");
+  const moov = methods.find((method) => method.type === "ussd_moov");
+  return {
+    ussd_orange: {
+      enabled: orange?.active ?? false,
+      phone: orange?.phone_or_code ?? "",
+      ussdTemplate: orange?.ussd_template ?? "",
+    },
+    ussd_moov: {
+      enabled: moov?.active ?? false,
+      phone: moov?.phone_or_code ?? "",
+      ussdTemplate: moov?.ussd_template ?? "",
+    },
+    cash_on_delivery:
+      methods.find((method) => method.type === "cash_on_delivery")?.active ??
+      false,
+    pay_at_pickup:
+      methods.find((method) => method.type === "pay_at_pickup")?.active ??
+      false,
+  };
 }
 
 function addStepTime(

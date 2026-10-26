@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { createClient, getUser } = vi.hoisted(() => ({
+const { createClient, getUser, expirePublicShopIndex } = vi.hoisted(() => ({
   createClient: vi.fn(),
   getUser: vi.fn(),
+  expirePublicShopIndex: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -18,10 +19,16 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
+vi.mock("@/features/storefront/cache", () => ({
+  expirePublicShopIndex,
+}));
+
 import {
   checkShopSlugAvailability,
   createOnboardingShop,
+  saveOnboardingPaymentMethods,
   saveOnboardingDraft,
+  submitShopForReview,
 } from "./actions";
 import { createDefaultDraft } from "./schemas";
 
@@ -117,5 +124,83 @@ describe("shop onboarding server actions", () => {
         draft: expect.objectContaining({ name: "A" }),
       }),
     );
+    expect(expirePublicShopIndex).toHaveBeenCalledOnce();
+  });
+
+  it("normalizes merchant USSD numbers and saves methods through the owner RPC", async () => {
+    const ownershipQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: "00000000-0000-4000-8000-000000000000" },
+        error: null,
+      }),
+    };
+    const supabase = {
+      from: vi.fn(() => ownershipQuery),
+      rpc: vi.fn().mockResolvedValue({ error: null }),
+    };
+    getUser.mockResolvedValue({
+      id: "user-1",
+      email_confirmed_at: "2025-01-01T00:00:00.000Z",
+    });
+    createClient.mockResolvedValue(supabase);
+
+    const result = await saveOnboardingPaymentMethods(
+      "00000000-0000-4000-8000-000000000000",
+      [
+        {
+          type: "ussd_orange",
+          phone: "70123456",
+          ussdTemplate: "*144#",
+        },
+        { type: "pay_at_pickup" },
+      ],
+    );
+
+    expect(result).toMatchObject({ success: true });
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      "save_onboarding_payment_methods",
+      {
+        p_shop: "00000000-0000-4000-8000-000000000000",
+        p_methods: [
+          {
+            type: "ussd_orange",
+            phone: "+22670123456",
+            ussdTemplate: "*144#",
+          },
+          { type: "pay_at_pickup" },
+        ],
+      },
+    );
+  });
+
+  it("shows a specific checklist error when submission lacks a catalog", async () => {
+    const ownershipQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: "00000000-0000-4000-8000-000000000000" },
+        error: null,
+      }),
+    };
+    const supabase = {
+      from: vi.fn(() => ownershipQuery),
+      rpc: vi.fn().mockResolvedValue({
+        error: { message: "missing_catalog" },
+      }),
+    };
+    getUser.mockResolvedValue({
+      id: "user-1",
+      email_confirmed_at: "2025-01-01T00:00:00.000Z",
+    });
+    createClient.mockResolvedValue(supabase);
+
+    await expect(
+      submitShopForReview("00000000-0000-4000-8000-000000000000"),
+    ).resolves.toEqual({
+      success: false,
+      message: "Ajoute au moins un vrai produit ou service.",
+    });
   });
 });

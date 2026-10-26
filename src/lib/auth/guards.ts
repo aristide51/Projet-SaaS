@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import { redirect } from "next/navigation";
 import { getSafeRedirectPath } from "@/lib/auth/redirect";
 import { createClient, getUser } from "@/lib/supabase/server";
@@ -32,7 +33,7 @@ export async function requireAdminUser() {
   }
 
   if (profile?.role_global !== "admin") {
-    redirect("/account?error=access-denied");
+    notFound();
   }
 
   return user;

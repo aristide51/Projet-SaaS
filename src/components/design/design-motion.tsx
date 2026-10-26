@@ -1,22 +1,28 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const ThreeScene = dynamic(() => import("./three-scene"), {
   ssr: false,
   loading: () => <div aria-hidden="true" className="scene-fallback" />,
 });
 
+type MotionRefs = {
+  reveal: HTMLElement[];
+  stagger: HTMLElement[];
+};
+
 export function DesignMotion() {
   const [reducedMotion, setReducedMotion] = useState(true);
+  const refs = useRef<MotionRefs>({ reveal: [], stagger: [] });
+  const contextRef = useRef<{ revert: () => void } | undefined>(undefined);
+  const cancelledRef = useRef(false);
 
   useEffect(() => {
     const motionPreference = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     );
-    let context: { revert: () => void } | undefined;
-    let cancelled = false;
 
     async function animateOnScroll() {
       const [{ default: gsap }, { ScrollTrigger }] = await Promise.all([
@@ -24,30 +30,55 @@ export function DesignMotion() {
         import("gsap/ScrollTrigger"),
       ]);
 
-      if (cancelled || motionPreference.matches) {
+      if (cancelledRef.current || motionPreference.matches) {
         return;
       }
 
-      context?.revert();
+      contextRef.current?.revert();
       gsap.registerPlugin(ScrollTrigger);
-      context = gsap.context(() => {
-        gsap.utils.toArray<HTMLElement>(".design-reveal").forEach((element) => {
+
+      contextRef.current = gsap.context(() => {
+        // Révélation simple des sections
+        gsap.utils.toArray<HTMLElement>(`.design-reveal`).forEach((element) => {
+          refs.current.reveal.push(element);
           gsap.fromTo(
             element,
-            { autoAlpha: 0, y: 22 },
+            { autoAlpha: 0, y: 28 },
             {
               autoAlpha: 1,
               y: 0,
-              duration: 0.65,
-              ease: "power2.out",
+              duration: 0.7,
+              ease: "power3.out",
               scrollTrigger: {
                 trigger: element,
-                start: "top 86%",
+                start: "top 88%",
                 once: true,
               },
             },
           );
         });
+
+        // Stagger pour les listes de fonctionnalités
+        gsap.utils.toArray<HTMLElement>(`.design-stagger`).forEach((element) => {
+          refs.current.stagger.push(element);
+          gsap.fromTo(
+            element,
+            { autoAlpha: 0, y: 20 },
+            {
+              autoAlpha: 1,
+              y: 0,
+              duration: 0.55,
+              ease: "power2.out",
+              stagger: 0.12,
+              scrollTrigger: {
+                trigger: element,
+                start: "top 88%",
+                once: true,
+              },
+            },
+          );
+        });
+
       });
     }
 
@@ -55,8 +86,8 @@ export function DesignMotion() {
       setReducedMotion(motionPreference.matches);
 
       if (motionPreference.matches) {
-        context?.revert();
-        context = undefined;
+        contextRef.current?.revert();
+        contextRef.current = undefined;
       } else {
         void animateOnScroll();
       }
@@ -66,9 +97,9 @@ export function DesignMotion() {
     motionPreference.addEventListener("change", updateMotionPreference);
 
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
       motionPreference.removeEventListener("change", updateMotionPreference);
-      context?.revert();
+      contextRef.current?.revert();
     };
   }, []);
 
@@ -76,8 +107,8 @@ export function DesignMotion() {
     <div className="motion-showcase">
       <div className="motion-showcase__copy">
         <span className="eyebrow">Mouvement, avec mesure</span>
-        <h3>Du relief, sans ralentir le quotidien.</h3>
-        <p>
+        <h3 className="design-reveal">Du relief, sans ralentir le quotidien.</h3>
+        <p className="design-reveal">
           GSAP et ScrollTrigger guident le regard. Une scène Three.js légère
           souligne les moments clés — jamais les tâches du commerçant.
         </p>

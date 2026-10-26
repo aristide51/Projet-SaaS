@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   Badge,
@@ -152,14 +153,14 @@ export function DesignSystemPage() {
       </a>
 
       <header className="design-header">
-        <a className="brand" href="/design">
+        <Link href="/design" className="brand">
           <span aria-hidden="true" className="brand__mark">
             f.
           </span>
           <span>
             faso<span className="brand__light">studio</span>
           </span>
-        </a>
+        </Link>
         <nav aria-label="Navigation de la page Design" className="design-nav">
           <a href="#fondations">Fondations</a>
           <a href="#composants">Composants</a>

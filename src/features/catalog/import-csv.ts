@@ -1,22 +1,24 @@
 "use server";
 
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { logError } from "@/lib/monitoring/sentry";
 import { createClient, getUser } from "@/lib/supabase/server";
-import {
-  csvRowSchema,
-  type CsvRowInput,
-  type CsvRowResult,
-} from "./import-csv-schema";
+import { csvRowSchema, type CsvRowInput } from "./import-csv-schema";
 
 type ImportCsvResult =
   | {
       success: true;
       message: string;
       imported: number;
-      skipped: number;
     }
   | { success: false; message: string };
+
+type ImportCapacityResult =
+  { success: true } | { success: false; message: string };
+
+const MAX_IMPORT_ROWS = 500;
+const MAX_BATCH_ROWS = 50;
 
 function failure(message: string): ImportCsvResult {
   return { success: false, message };
@@ -49,161 +51,143 @@ async function getCatalogAccess(shopId: string) {
       ? member.permissions
       : {};
 
+  if (!member || (member.role !== "owner" && permissions.catalog !== true)) {
+    return { error: "Tu n’as pas le droit de gérer ce catalogue." };
+  }
+
+  return { supabase };
+}
+
+async function getRemainingSlots(
+  shopId: string,
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<{ remaining: number | null } | { error: string }> {
+  const { count: existingCount, error: countError } = await supabase
+    .from("products")
+    .select("id", { count: "exact", head: true })
+    .eq("shop_id", shopId)
+    .eq("is_sample", false)
+    .is("deleted_at", null);
+
+  if (countError) {
+    await logError("catalog_csv_count_failed", countError);
+    return { error: "Impossible de vérifier la limite de produits." };
+  }
+
+  const { data: maxProducts, error: limitError } = await supabase.rpc(
+    "catalog_product_limit",
+    { p_shop: shopId },
+  );
+
+  if (limitError) {
+    await logError("catalog_csv_limit_failed", limitError);
+    return { error: "Impossible de vérifier la limite de ton plan." };
+  }
+
+  return {
+    remaining:
+      maxProducts === null
+        ? null
+        : Math.max(0, maxProducts - (existingCount ?? 0)),
+  };
+}
+
+export async function checkCsvImportCapacity(
+  shopId: string,
+  rowCount: unknown,
+): Promise<ImportCapacityResult> {
+  if (
+    typeof rowCount !== "number" ||
+    !Number.isInteger(rowCount) ||
+    rowCount < 1 ||
+    rowCount > MAX_IMPORT_ROWS
+  ) {
+    return {
+      success: false,
+      message: "L’import doit contenir entre 1 et 500 produits valides.",
+    };
+  }
+
+  try {
+    const access = await getCatalogAccess(shopId);
+    if ("error" in access) {
+      return { success: false, message: access.error };
+    }
+    const capacity = await getRemainingSlots(shopId, access.supabase);
+    if ("error" in capacity) {
+      return { success: false, message: capacity.error };
+    }
+    if (capacity.remaining !== null && rowCount > capacity.remaining) {
+      return {
+        success: false,
+        message: `Tu ne peux importer que ${capacity.remaining} produit(s) supplémentaire(s) avec ton plan actuel (limite atteinte).`,
+      };
+    }
+    return { success: true };
+  } catch (error) {
+    await logError("catalog_csv_capacity_failed", error);
+    return {
+      success: false,
+      message: "Impossible de vérifier la capacité de ton catalogue.",
+    };
+  }
+}
+
 export async function importCsvProducts(
   shopId: string,
-  rows: CsvRowInput[],
+  input: unknown,
 ): Promise<ImportCsvResult> {
-  const BATCH_SIZE = 50;
-  let imported = 0;
-  let skipped = 0;
+  const validatedRows = z
+    .array(csvRowSchema)
+    .min(1)
+    .max(MAX_BATCH_ROWS)
+    .safeParse(input);
+  if (!validatedRows.success) {
+    return failure("Chaque lot doit contenir entre 1 et 50 lignes valides.");
+  }
+  const rows: CsvRowInput[] = validatedRows.data;
 
   try {
     const access = await getCatalogAccess(shopId);
     if ("error" in access) return failure(access.error);
     const { supabase } = access;
-
-    const { data: existingCount, error: countError } = await supabase
-      .from("products")
-      .select("id", { count: "exact", head: true })
-      .eq("shop_id", shopId)
-      .eq("is_sample", false)
-      .is("deleted_at", null);
-
-    if (countError) {
-      await logError("catalog_csv_count_failed", countError);
-      return failure("Impossible de vérifier la limite de produits.");
+    const capacity = await getRemainingSlots(shopId, supabase);
+    if ("error" in capacity) {
+      return failure(capacity.error);
     }
-
-    const { data: limitData, error: limitError } = await supabase.rpc(
-      "catalog_product_limit",
-      { p_shop: shopId },
-    );
-
-    if (limitError) {
-      await logError("catalog_csv_limit_failed", limitError);
-      return failure("Impossible de vérifier la limite de ton plan.");
-    }
-
-    const maxProducts = limitData as number | null;
-    const remainingSlots =
-      maxProducts !== null ? Math.max(0, maxProducts - (existingCount.count ?? 0)) : null;
-
-    if (remainingSlots !== null && rows.length > remainingSlots) {
+    if (capacity.remaining !== null && rows.length > capacity.remaining) {
       return failure(
-        `Tu ne peux importer que ${remainingSlots} produit(s) supplémentaire(s) avec ton plan actuel (limite atteinte).`,
+        `Tu ne peux importer que ${capacity.remaining} produit(s) supplémentaire(s) avec ton plan actuel (limite atteinte).`,
       );
     }
 
-    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-      const batch = rows.slice(i, i + BATCH_SIZE);
+    const { data: imported, error: importError } = await supabase.rpc(
+      "import_catalog_product_batch",
+      {
+        p_shop: shopId,
+        p_products: rows,
+      },
+    );
 
-      for (const row of batch) {
-        if (remainingSlots !== null && imported >= remainingSlots) {
-          skipped += 1;
-          continue;
-        }
-
-        const variantsPayload = row.variant_name
-          ? JSON.stringify([
-              {
-                name: row.variant_name,
-                price: row.variant_price ?? null,
-                stock: row.variant_stock ?? null,
-              },
-            ])
-          : JSON.stringify([]);
-
-        const { error: rpcError } = await supabase.rpc("save_catalog_product", {
-          p_shop: shopId,
-          p_product_id: null,
-          p_category_id: null,
-          p_name: row.name,
-          p_description: row.description,
-          p_price: row.price,
-          p_compare_at_price: row.compare_at_price ?? null,
-          p_sku: row.sku || null,
-          p_compatibility: row.compatibility || null,
-          p_stock: row.stock ?? null,
-          p_status: row.status,
-          p_variants: variantsPayload,
-        });
-
-        if (rpcError) {
-          await logError("catalog_csv_product_failed", rpcError);
-          skipped += 1;
-          if (rpcError.message?.includes("plan_limit_products")) {
-            break;
-          }
-          continue;
-        }
-
-        imported += 1;
+    if (importError || imported !== rows.length) {
+      if (importError) {
+        await logError("catalog_csv_batch_failed", importError);
       }
-
-      if (remainingSlots !== null && imported >= remainingSlots) {
-        skipped += rows.length - i - BATCH_SIZE;
-        break;
-      }
+      return failure(
+        importError?.message.includes("plan_limit_products")
+          ? "La limite de produits du plan est atteinte. Les produits de ce lot n’ont pas été importés."
+          : "Ce lot n’a pas pu être enregistré. Aucun produit du lot n’a été importé.",
+      );
     }
 
     revalidatePath("/dashboard/catalog");
-
-    if (skipped > 0 && imported > 0) {
-      return {
-        success: true,
-        message: `${imported} produit(s) importé(s), ${skipped} produit(s) ignoré(s) (limite de plan ou erreur).`,
-        imported,
-        skipped,
-      };
-    }
-
-    if (skipped > 0) {
-      return {
-        success: true,
-        message: `${skipped} produit(s) ignoré(s) (limite de plan atteinte).`,
-        imported,
-        skipped,
-      };
-    }
-
     return {
       success: true,
       message: `${imported} produit(s) importé(s) avec succès.`,
       imported,
-      skipped,
     };
   } catch (error) {
     await logError("catalog_csv_import_failed", error);
     return failure("L’import CSV a échoué. Vérifie le fichier et réessaie.");
   }
-}
-
-export async function validateCsvRows(
-  rows: Record<string, string>[],
-): Promise<{ valid: CsvRowInput[]; invalid: CsvRowResult[] }> {
-  const valid: CsvRowInput[] = [];
-  const invalid: CsvRowResult[] = [];
-
-  rows.forEach((row, index) => {
-    const result = csvRowSchema.safeParse(row);
-    if (result.success) {
-      valid.push(result.data);
-    } else {
-      invalid.push({
-        kind: "invalid",
-        rowIndex: index + 2,
-        row,
-        errors: result.error.issues.map((issue) => issue.message),
-      });
-    }
-  });
-
-  return { valid, invalid };
-}
-
-  if (!member || (member.role !== "owner" && permissions.catalog !== true)) {
-    return { error: "Tu n’as pas le droit de gérer ce catalogue." };
-  }
-
-  return { supabase, userId: user.id };
 }

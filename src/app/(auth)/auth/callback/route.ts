@@ -3,6 +3,7 @@ import { getSafeRedirectPath } from "@/lib/auth/redirect";
 import { getRequestOrigin } from "@/lib/security/origin";
 import { consumeReauthPending, setReauthProof } from "@/lib/security/reauth";
 import { createClient } from "@/lib/supabase/server";
+import { mergeGuestCartCookieIntoAccount } from "@/features/cart/data";
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
@@ -32,6 +33,8 @@ export async function GET(request: NextRequest) {
   ) {
     await setReauthProof(data.user.id);
   }
+
+  await mergeGuestCartCookieIntoAccount();
 
   return redirectToPath(next, request);
 }
