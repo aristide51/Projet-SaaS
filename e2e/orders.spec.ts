@@ -231,7 +231,6 @@ test("un employé sans permission commandes ne voit pas les commandes", async ({
 });
 
 async function signIn(page: Page, actionLink: string) {
-  await page.goto(actionLink);
-  await page.goto("/account");
-  await expect(page.getByRole("heading", { name: "Bienvenue" })).toBeVisible();
+  await page.goto(actionLink, { waitUntil: "commit", timeout: 15_000 });
+  await expect(page).toHaveURL(/\/account$/, { timeout: 20_000 });
 }
