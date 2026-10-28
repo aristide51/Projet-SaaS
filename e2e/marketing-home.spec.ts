@@ -29,14 +29,12 @@ test("page d’accueil marketing accessible et complète", async ({ page }) => {
     .analyze();
   expect(violations.violations).toEqual([]);
 
-  const firstQuestion = page.getByText("Faut-il savoir créer un site web?", {
-    exact: true,
-  });
+  const firstFaq = page.locator(".faq-list details").first();
+  const firstQuestion = firstFaq.locator("summary");
   await firstQuestion.focus();
   await page.keyboard.press("Enter");
-  await expect(
-    page.getByText(/sans écrire de code/, { exact: false }),
-  ).toBeVisible();
+  await expect(firstFaq).toHaveAttribute("open", "");
+  await expect(firstFaq).toContainText(/sans écrire de code/);
 });
 
 test("l’illustration 3D laisse place au repli sur appareil modeste", async ({
