@@ -173,10 +173,19 @@ export async function importCsvProducts(
       if (importError) {
         await logError("catalog_csv_batch_failed", importError);
       }
+      if (importError?.message.includes("plan_limit_products")) {
+        const capacityAfterFailure = await getRemainingSlots(shopId, supabase);
+        if ("error" in capacityAfterFailure) {
+          return failure(capacityAfterFailure.error);
+        }
+        return failure(
+          capacityAfterFailure.remaining === null
+            ? "La capacité du catalogue a changé. Actualise la page puis réessaie."
+            : `Tu ne peux importer que ${capacityAfterFailure.remaining} produit(s) supplémentaire(s) sur ton plan actuel. Consulte Abonnement pour voir les autres plans.`,
+        );
+      }
       return failure(
-        importError?.message.includes("plan_limit_products")
-          ? "La limite de produits du plan est atteinte. Les produits de ce lot n’ont pas été importés."
-          : "Ce lot n’a pas pu être enregistré. Aucun produit du lot n’a été importé.",
+        "Ce lot n’a pas pu être enregistré. Aucun produit du lot n’a été importé.",
       );
     }
 

@@ -65,7 +65,7 @@ async function getCatalogAccess(shopId: string) {
 
 function messageForDatabaseError(message: string) {
   if (message.includes("plan_limit_products")) {
-    return "La limite de 15 produits du plan Gratuit est atteinte. Passe à un plan supérieur ou mets un produit à la corbeille.";
+    return "La limite de produits de ton plan est atteinte. Consulte Abonnement pour voir ton quota, ou mets un produit à la corbeille.";
   }
   if (message.includes("variant_in_cart")) {
     return "Cette variante est dans un panier. Retire-la du panier avant de la supprimer.";
@@ -83,6 +83,24 @@ function messageForDatabaseError(message: string) {
     return "Une catégorie ne peut pas être son propre parent ou celui d’un de ses parents.";
   }
   return "L’enregistrement a échoué. Vérifie les informations et réessaie.";
+}
+
+async function productLimitErrorMessage(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  shopId: string,
+) {
+  const { data: maxProducts, error } = await supabase.rpc(
+    "catalog_product_limit",
+    { p_shop: shopId },
+  );
+  if (error) {
+    await logError("catalog_product_limit_lookup_failed", error);
+    return "La limite de produits de ton plan est atteinte. Consulte Abonnement ou mets un produit à la corbeille.";
+  }
+  if (maxProducts === null) {
+    return "La capacité du catalogue a changé. Actualise la page puis réessaie.";
+  }
+  return `La limite de ${maxProducts} produits de ton plan est atteinte. Consulte Abonnement ou mets un produit à la corbeille.`;
 }
 
 export async function saveCategory(
@@ -202,7 +220,9 @@ export async function saveProduct(
       if (error) await logError("catalog_product_save_failed", error);
       return failure(
         error
-          ? messageForDatabaseError(error.message)
+          ? error.message.includes("plan_limit_products")
+            ? await productLimitErrorMessage(access.supabase, shopId)
+            : messageForDatabaseError(error.message)
           : "Le produit n’a pas pu être enregistré. Réessaie.",
       );
     }
@@ -347,7 +367,11 @@ export async function setCatalogItemDeleted(
 
     if (error) {
       await logError("catalog_item_archive_failed", error);
-      return failure(messageForDatabaseError(error.message));
+      return failure(
+        kind === "product" && error.message.includes("plan_limit_products")
+          ? await productLimitErrorMessage(access.supabase, shopId)
+          : messageForDatabaseError(error.message),
+      );
     }
 
     revalidatePublicShop(shopId);

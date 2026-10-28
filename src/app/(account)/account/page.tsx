@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getUser } from "@/lib/supabase/server";
 import { SignOutButton } from "@/features/auth/sign-out-button";
 import { ProfileForm } from "@/features/profile/profile-form";
@@ -79,6 +80,17 @@ export default async function AccountPage({
         .in("order_id", orderIds)
         .order("requested_at", { ascending: false })
     : { data: [], error: null };
+  const completedOrderIds = (orders ?? [])
+    .filter((order) => order.status === "completed")
+    .map((order) => order.id);
+  const { data: customerReviews, error: customerReviewsError } =
+    completedOrderIds.length
+      ? await supabase
+          .from("reviews")
+          .select("order_id")
+          .eq("customer_id", user.id)
+          .in("order_id", completedOrderIds)
+      : { data: [], error: null };
 
   if (shopsError) {
     throw new Error("Impossible de charger les boutiques de tes commandes.", {
@@ -88,6 +100,11 @@ export default async function AccountPage({
   if (requestsError) {
     throw new Error("Impossible de charger les demandes d’annulation.", {
       cause: requestsError,
+    });
+  }
+  if (customerReviewsError) {
+    throw new Error("Impossible de vérifier les avis déjà publiés.", {
+      cause: customerReviewsError,
     });
   }
 
@@ -100,6 +117,11 @@ export default async function AccountPage({
       latestRequestByOrder.set(request.order_id, request);
     }
   }
+  const reviewedOrderIds = new Set(
+    (customerReviews ?? []).flatMap((review) =>
+      review.order_id ? [review.order_id] : [],
+    ),
+  );
 
   return (
     <main className="auth-main">
@@ -108,6 +130,12 @@ export default async function AccountPage({
         <h1>Mon profil</h1>
         <p className="auth-description">Connecté avec {user.email}</p>
         <NotificationCenter userId={user.id} />
+        <Link
+          className="ui-button ui-button--secondary"
+          href="/account/bookings"
+        >
+          Mes rendez-vous
+        </Link>
         <ProfileForm
           avatarUrl={profile.avatar_url}
           fullName={profile.full_name ?? ""}
@@ -121,10 +149,12 @@ export default async function AccountPage({
             items: order.order_items ?? [],
             history: order.order_status_history ?? [],
             cancellationRequest: latestRequestByOrder.get(order.id) ?? null,
+            reviewed: reviewedOrderIds.has(order.id),
           }))}
           currentPage={currentPage}
           totalCount={totalOrders}
           shops={shops ?? []}
+          userId={user.id}
         />
       </section>
     </main>

@@ -36,7 +36,7 @@ export function getSecurityHeaders() {
     "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'",
+    `form-action 'self' ${supabaseOrigin ?? ""}`.trim(),
     "frame-ancestors 'none'",
     ...(isProduction ? ["upgrade-insecure-requests"] : []),
   ].join("; ");

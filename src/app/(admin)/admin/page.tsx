@@ -3,6 +3,7 @@ import {
   type AdminShop,
   type AdminAuditEntry,
 } from "@/features/admin/admin-workspace";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -175,6 +176,9 @@ export default async function AdminPage() {
 
   return (
     <main className="admin-shell">
+      <Link className="ui-button ui-button--secondary" href="/admin/review-reports">
+        Modérer les avis signalés
+      </Link>
       <AdminWorkspace
         audit={audit}
         approvedShops={approvedResult.data ?? []}

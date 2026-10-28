@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   createShopInvitation,
   removeShopStaff,
@@ -231,7 +232,16 @@ export function TeamWorkspace({
         >
           {busy ? "Enregistrement…" : "Envoyer l’invitation"}
         </button>
-        {atLimit ? <p>La limite de places de ton plan est atteinte.</p> : null}
+        {atLimit ? (
+          <p>
+            La limite de places de ton plan est atteinte.{" "}
+            <Link
+              href={`/dashboard/abonnement?shop=${encodeURIComponent(shopId)}`}
+            >
+              Voir les plans
+            </Link>
+          </p>
+        ) : null}
       </section>
 
       <section className="team-section">

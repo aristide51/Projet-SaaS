@@ -43,6 +43,59 @@ describe("order notification email", () => {
     ).toBeNull();
   });
 
+  it("renders subscription reminders without payment details", () => {
+    const email = buildOrderEmail(
+      "subscription_reminder",
+      {
+        shop_id: "50000000-0000-0000-0000-000000000001",
+        reminder_key: "7_days",
+        payment_ref: "MUST-NOT-APPEAR",
+      },
+      "Boutique de Awa",
+      unsubscribeUrl,
+    );
+
+    expect(email?.subject).toContain("dans 7 jours");
+    expect(email?.text).toContain("Boutique de Awa");
+    expect(email?.text).not.toContain("MUST-NOT-APPEAR");
+    const dueEmail = buildOrderEmail(
+      "subscription_reminder",
+      { reminder_key: "due" },
+      "Boutique de Awa",
+      unsubscribeUrl,
+    );
+    expect(dueEmail?.text).toContain("est arrivé à échéance");
+    expect(
+      buildOrderEmail(
+        "subscription_reminder",
+        { reminder_key: "unknown" },
+        "Boutique",
+        unsubscribeUrl,
+      ),
+    ).toBeNull();
+  });
+
+  it("adds a confirmation link to booking reminders without exposing payment data", () => {
+    const email = buildOrderEmail(
+      "booking_reminder",
+      {
+        reminder_stage: "24_hours",
+        appointment_at: "2026-12-01T09:00:00.000Z",
+        service_name: "Coupe",
+        cancel_url: "https://example.test/booking-cancel?token=signed",
+        payer_phone: "+22670000000",
+      },
+      "Salon Awa",
+      unsubscribeUrl,
+    );
+
+    expect(email?.subject).toContain("demain");
+    expect(email?.text).toContain("Coupe chez Salon Awa");
+    expect(email?.text).toContain("https://example.test/booking-cancel?token=signed");
+    expect(email?.text).not.toContain("+22670000000");
+    expect(email?.html).toContain("Gérer l’annulation du rendez-vous");
+  });
+
   it("uses the injected transport and propagates transport failures", async () => {
     const content = buildOrderEmail(
       "order_received",

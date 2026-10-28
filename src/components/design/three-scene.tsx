@@ -1,6 +1,24 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import {
+  BufferAttribute,
+  BufferGeometry,
+  DirectionalLight,
+  FogExp2,
+  Group,
+  HemisphereLight,
+  IcosahedronGeometry,
+  Mesh,
+  MeshStandardMaterial,
+  PerspectiveCamera,
+  Points,
+  PointsMaterial,
+  Scene,
+  SRGBColorSpace,
+  TorusGeometry,
+  WebGLRenderer,
+} from "three";
 
 export default function ThreeScene() {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -13,29 +31,30 @@ export default function ThreeScene() {
       "(prefers-reduced-motion: reduce)",
     );
     let frame = 0;
-    let renderer: import("three").WebGLRenderer | undefined;
-    let scene: import("three").Scene | undefined;
-    let camera: import("three").PerspectiveCamera | undefined;
-    let group: import("three").Group | undefined;
-    let particles: import("three").Points | undefined;
-    let coreGeometry: import("three").IcosahedronGeometry | undefined;
-    let coreMaterial: import("three").MeshStandardMaterial | undefined;
-    let ringGeometry: import("three").TorusGeometry | undefined;
-    let ringMaterial: import("three").MeshStandardMaterial | undefined;
-    let particleGeometry: import("three").BufferGeometry | undefined;
-    let particleMaterial: import("three").PointsMaterial | undefined;
+    let renderer: WebGLRenderer | undefined;
+    let scene: Scene | undefined;
+    let camera: PerspectiveCamera | undefined;
+    let group: Group | undefined;
+    let particles: Points | undefined;
+    let coreGeometry: IcosahedronGeometry | undefined;
+    let coreMaterial: MeshStandardMaterial | undefined;
+    let ringGeometry: TorusGeometry | undefined;
+    let ringMaterial: MeshStandardMaterial | undefined;
+    let particleGeometry: BufferGeometry | undefined;
+    let particleMaterial: PointsMaterial | undefined;
     let resizeObserver: ResizeObserver | undefined;
+    let visibilityObserver: IntersectionObserver | undefined;
     let cancelled = false;
+    let isVisible = false;
     let cleanup = () => {};
 
-    async function initializeScene() {
-      const THREE = await import("three");
+    function initializeScene() {
       if (cancelled || !mount) return;
 
-      scene = new THREE.Scene();
-      scene.fog = new THREE.FogExp2(0x111a15, 0.045);
+      scene = new Scene();
+      scene.fog = new FogExp2(0x111a15, 0.045);
 
-      camera = new THREE.PerspectiveCamera(
+      camera = new PerspectiveCamera(
         36,
         mount.clientWidth / Math.max(mount.clientHeight, 1),
         0.1,
@@ -43,69 +62,69 @@ export default function ThreeScene() {
       );
       camera.position.set(0, 1.2, 5.2);
 
-      renderer = new THREE.WebGLRenderer({
+      renderer = new WebGLRenderer({
         alpha: true,
         antialias: true,
         powerPreference: "low-power",
       });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
       renderer.setSize(mount.clientWidth, mount.clientHeight);
-      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.outputColorSpace = SRGBColorSpace;
       renderer.domElement.setAttribute("aria-hidden", "true");
       renderer.domElement.setAttribute("role", "presentation");
       mount.appendChild(renderer.domElement);
 
-      group = new THREE.Group();
+      group = new Group();
 
-      coreGeometry = new THREE.IcosahedronGeometry(1.05, 1);
-      coreMaterial = new THREE.MeshStandardMaterial({
+      coreGeometry = new IcosahedronGeometry(1.05, 1);
+      coreMaterial = new MeshStandardMaterial({
         color: 0xd2f284,
         metalness: 0.22,
         roughness: 0.28,
         flatShading: true,
       });
-      const core = new THREE.Mesh(coreGeometry, coreMaterial);
+      const core = new Mesh(coreGeometry, coreMaterial);
       group.add(core);
 
-      ringGeometry = new THREE.TorusGeometry(1.55, 0.035, 16, 64);
-      ringMaterial = new THREE.MeshStandardMaterial({
+      ringGeometry = new TorusGeometry(1.55, 0.035, 16, 64);
+      ringMaterial = new MeshStandardMaterial({
         color: 0xffffff,
         metalness: 0.4,
         roughness: 0.18,
         transparent: true,
         opacity: 0.42,
       });
-      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      const ring = new Mesh(ringGeometry, ringMaterial);
       ring.rotation.x = Math.PI / 2;
       group.add(ring);
 
       scene.add(group);
 
       const particleCount = motionPreference.matches ? 40 : 160;
-      particleGeometry = new THREE.BufferGeometry();
+      particleGeometry = new BufferGeometry();
       const particlePositions = new Float32Array(particleCount * 3);
       for (let i = 0; i < particleCount * 3; i++) {
         particlePositions[i] = (Math.random() - 0.5) * 14;
       }
       particleGeometry.setAttribute(
         "position",
-        new THREE.BufferAttribute(particlePositions, 3),
+        new BufferAttribute(particlePositions, 3),
       );
-      particleMaterial = new THREE.PointsMaterial({
+      particleMaterial = new PointsMaterial({
         color: 0xffffff,
         size: motionPreference.matches ? 0.04 : 0.055,
         transparent: true,
         opacity: 0.55,
         sizeAttenuation: true,
       });
-      particles = new THREE.Points(particleGeometry, particleMaterial);
+      particles = new Points(particleGeometry, particleMaterial);
       scene.add(particles);
 
-      scene.add(new THREE.HemisphereLight(0xf6ffe8, 0x617c42, 1.8));
-      const keyLight = new THREE.DirectionalLight(0xffffff, 2.6);
+      scene.add(new HemisphereLight(0xf6ffe8, 0x617c42, 1.8));
+      const keyLight = new DirectionalLight(0xffffff, 2.6);
       keyLight.position.set(3, 4, 5);
       scene.add(keyLight);
-      const fillLight = new THREE.DirectionalLight(0xd2f284, 1.2);
+      const fillLight = new DirectionalLight(0xd2f284, 1.2);
       fillLight.position.set(-3, 1, -3);
       scene.add(fillLight);
 
@@ -120,6 +139,16 @@ export default function ThreeScene() {
 
       resizeObserver = new ResizeObserver(resize);
       resizeObserver.observe(mount);
+      visibilityObserver = new IntersectionObserver(([entry]) => {
+        isVisible = Boolean(entry?.isIntersecting);
+        if (isVisible && !motionPreference.matches && !frame) {
+          frame = window.requestAnimationFrame(render);
+        } else if (!isVisible && frame) {
+          window.cancelAnimationFrame(frame);
+          frame = 0;
+        }
+      });
+      visibilityObserver.observe(mount);
 
       let mouseX = 0;
       let mouseY = 0;
@@ -131,6 +160,7 @@ export default function ThreeScene() {
       window.addEventListener("mousemove", onMouseMove);
 
       const render = (time = 0) => {
+        frame = 0;
         if (!renderer || !scene || !camera || !group || !particles) return;
 
         const elapsed = time * 0.001;
@@ -142,30 +172,42 @@ export default function ThreeScene() {
           group.rotation.x += mouseY * 0.05;
 
           const positions = particles.geometry.attributes
-            .position as import("three").BufferAttribute;
+            .position as BufferAttribute;
           const count = positions.count;
           for (let i = 0; i < count; i++) {
-            let y = positions.getY(i);
-            y -= elapsed * 0.06;
-            if (y < -7) y += 14;
-            positions.setY(i, y);
+            positions.setY(i, Math.sin(elapsed * 0.14 + i) * 0.035);
           }
           positions.needsUpdate = true;
         }
 
         renderer.render(scene, camera);
 
-        if (!motionPreference.matches) {
+        if (isVisible && !motionPreference.matches) {
           frame = window.requestAnimationFrame(render);
         }
       };
 
-      render();
+      const onMotionPreferenceChange = () => {
+        if (motionPreference.matches && frame) {
+          window.cancelAnimationFrame(frame);
+          frame = 0;
+        } else if (isVisible && !frame) {
+          frame = window.requestAnimationFrame(render);
+        }
+      };
+      motionPreference.addEventListener("change", onMotionPreferenceChange);
+      if (!motionPreference.matches)
+        frame = window.requestAnimationFrame(render);
 
       cleanup = () => {
-        window.cancelAnimationFrame(frame);
+        if (frame) window.cancelAnimationFrame(frame);
         window.removeEventListener("mousemove", onMouseMove);
+        motionPreference.removeEventListener(
+          "change",
+          onMotionPreferenceChange,
+        );
         resizeObserver?.disconnect();
+        visibilityObserver?.disconnect();
         coreGeometry?.dispose();
         coreMaterial?.dispose();
         ringGeometry?.dispose();

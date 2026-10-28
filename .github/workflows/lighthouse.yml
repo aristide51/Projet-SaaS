@@ -1,0 +1,77 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "public/**"
+      - "supabase/migrations/**"
+      - "supabase/config.toml"
+      - "scripts/lighthouse-fixtures.sql"
+      - "docs/performance.md"
+      - ".lighthouserc.cjs"
+      - ".github/workflows/lighthouse.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  budgets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Start local Supabase and apply migrations
+        run: |
+          pnpm exec supabase start
+          pnpm exec supabase db reset --local
+      - name: Prepare Lighthouse environment
+        shell: bash
+        run: |
+          status="$(pnpm exec supabase status -o env)"
+          api_url="$(printf '%s\n' "$status" | awk -F= '/^API_URL=/{gsub(/"/, "", $2); print $2}')"
+          anon_key="$(printf '%s\n' "$status" | awk -F= '/^ANON_KEY=/{gsub(/"/, "", $2); print $2}')"
+          test -n "$api_url"
+          test -n "$anon_key"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$api_url"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$anon_key"
+            echo "NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000"
+          } >> "$GITHUB_ENV"
+      - name: Seed public Lighthouse routes
+        run: |
+          PGPASSWORD=postgres psql \
+            --host 127.0.0.1 \
+            --port 55422 \
+            --username postgres \
+            --dbname postgres \
+            --set ON_ERROR_STOP=1 \
+            --file scripts/lighthouse-fixtures.sql
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+        with:
+          chrome-version: stable
+      - run: pnpm build
+      - name: Enforce Lighthouse budgets
+        run: npx --yes @lhci/cli@0.15.1 autorun
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/
+          if-no-files-found: ignore

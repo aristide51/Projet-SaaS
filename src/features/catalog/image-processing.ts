@@ -1,7 +1,10 @@
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGE_SIDE = 1800;
 
-export async function convertImageToWebp(file: File): Promise<File> {
+export async function convertImageToWebp(
+  file: File,
+  maxBytes = MAX_IMAGE_BYTES,
+): Promise<File> {
   if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
     throw new Error("Choisis une image JPG, PNG ou WebP.");
   }
@@ -33,7 +36,7 @@ export async function convertImageToWebp(file: File): Promise<File> {
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, "image/webp", 0.84 - attempt * 0.08),
       );
-      if (blob && blob.size <= MAX_IMAGE_BYTES) {
+      if (blob && blob.size <= maxBytes) {
         const name = file.name.replace(/\.[^/.]+$/, "") || "image";
         return new File([blob], `${name}.webp`, { type: "image/webp" });
       }
@@ -44,5 +47,7 @@ export async function convertImageToWebp(file: File): Promise<File> {
     URL.revokeObjectURL(sourceUrl);
   }
 
-  throw new Error("Cette image reste supérieure à 5 Mo après compression.");
+  throw new Error(
+    `Cette image reste supérieure à ${Math.round(maxBytes / (1024 * 1024))} Mo après compression.`,
+  );
 }

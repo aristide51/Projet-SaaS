@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   cancelCustomerOrder,
   requestCustomerOrderCancellation,
@@ -14,8 +14,11 @@ import {
   type OrderStatusHistoryRow,
   type OrderStatus,
 } from "./types";
+import { ReviewForm } from "@/features/reviews/review-form";
+import { savePrivateSnapshot } from "@/lib/pwa/private-data";
+import { useOfflineStatus } from "@/lib/pwa/use-offline-status";
 
-type CustomerOrder = {
+export type CustomerOrder = {
   id: string;
   code: string;
   shop_id: string;
@@ -42,9 +45,10 @@ type CustomerOrder = {
     requested_at: string;
     resolved_at: string | null;
   } | null;
+  reviewed: boolean;
 };
 
-type ShopSummary = { id: string; name: string; slug: string };
+export type ShopSummary = { id: string; name: string; slug: string };
 
 const money = new Intl.NumberFormat("fr-FR", {
   maximumFractionDigits: 0,
@@ -61,18 +65,61 @@ export function CustomerOrders({
   shops,
   currentPage,
   totalCount,
+  userId,
 }: {
   orders: CustomerOrder[];
   shops: ShopSummary[];
   currentPage: number;
   totalCount: number;
+  userId: string;
 }) {
   const router = useRouter();
   const [busyOrder, setBusyOrder] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [requestNotes, setRequestNotes] = useState<Record<string, string>>({});
+  const isOffline = useOfflineStatus();
+  const [offlineStorageError, setOfflineStorageError] = useState(false);
   const shopById = new Map(shops.map((shop) => [shop.id, shop]));
+
+  useEffect(() => {
+    let active = true;
+    let wasOffline = !navigator.onLine;
+    const handleOnline = () => {
+      if (wasOffline) {
+        wasOffline = false;
+        router.refresh();
+      }
+    };
+    const handleOffline = () => {
+      wasOffline = true;
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    void savePrivateSnapshot(userId, "orders", {
+      orders: orders.map((order) => ({
+        code: order.code,
+        shop_id: order.shop_id,
+        status: order.status,
+        total: order.total,
+        created_at: order.created_at,
+        items: order.items.map((item) => ({
+          name_snapshot: item.name_snapshot,
+          quantity: item.quantity,
+        })),
+      })),
+      shops: shops.map(({ id, name }) => ({ id, name })),
+    }).catch(() => {
+      if (active) setOfflineStorageError(true);
+    });
+
+    return () => {
+      active = false;
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [orders, router, shops, userId]);
 
   async function cancel(orderId: string) {
     if (!window.confirm("Veux-tu vraiment annuler cette commande ?")) return;
@@ -126,6 +173,18 @@ export function CustomerOrders({
         </p>
       </div>
 
+      {isOffline ? (
+        <p className="ui-message" role="status">
+          Hors connexion : consultation uniquement. Annulation, demande
+          d’annulation, avis et paiement sont désactivés.
+        </p>
+      ) : null}
+      {offlineStorageError ? (
+        <p className="ui-message ui-message--error" role="status">
+          Les commandes ne pourront pas être consultées hors connexion sur cet
+          appareil.
+        </p>
+      ) : null}
       {error ? (
         <p className="auth-form__error" role="alert">
           {error}
@@ -205,23 +264,45 @@ export function CustomerOrders({
                       </li>
                     ))}
                 </ol>
+                {order.status === "completed" ? (
+                  order.reviewed ? (
+                    <p className="ui-message ui-message--success">
+                      Merci, tu as déjà évalué cette expérience.
+                    </p>
+                  ) : isOffline ? (
+                    <p className="ui-message">
+                      La publication d’un avis nécessite une connexion.
+                    </p>
+                  ) : (
+                    <ReviewForm orderId={order.id} shopId={order.shop_id} />
+                  )
+                ) : null}
                 <div className="customer-order__actions">
                   {shop &&
                   order.payment_method.startsWith("ussd_") &&
                   ["pending_payment", "payment_declared"].includes(
                     order.status,
                   ) ? (
-                    <Link
-                      className="ui-button ui-button--secondary"
-                      href={`/${encodeURIComponent(shop.slug)}/payment/${encodeURIComponent(order.id)}`}
-                    >
-                      Voir le paiement
-                    </Link>
+                    isOffline ? (
+                      <span
+                        className="ui-button ui-button--secondary"
+                        aria-disabled="true"
+                      >
+                        Paiement indisponible hors connexion
+                      </span>
+                    ) : (
+                      <Link
+                        className="ui-button ui-button--secondary"
+                        href={`/${encodeURIComponent(shop.slug)}/payment/${encodeURIComponent(order.id)}`}
+                      >
+                        Voir le paiement
+                      </Link>
+                    )
                   ) : null}
                   {order.status === "pending_payment" ? (
                     <button
                       className="ui-button ui-button--secondary"
-                      disabled={isBusy}
+                      disabled={isBusy || isOffline}
                       onClick={() => void cancel(order.id)}
                       type="button"
                     >
@@ -235,7 +316,7 @@ export function CustomerOrders({
                       <label>
                         Motif (facultatif)
                         <textarea
-                          disabled={isBusy}
+                          disabled={isBusy || isOffline}
                           maxLength={500}
                           onChange={(event) =>
                             setRequestNotes((previous) => ({
@@ -248,7 +329,7 @@ export function CustomerOrders({
                       </label>
                       <button
                         className="ui-button ui-button--secondary"
-                        disabled={isBusy}
+                        disabled={isBusy || isOffline}
                         onClick={() => void requestCancellation(order.id)}
                         type="button"
                       >

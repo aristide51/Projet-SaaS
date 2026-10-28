@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { StorefrontCartProvider } from "@/features/cart/storefront-cart";
 import { hasGuestCartCookie } from "@/features/cart/data";
+import { PwaStatus } from "@/features/pwa/pwa-status";
 import { getPublicShop } from "@/features/storefront/data";
 import { getSessionUser } from "@/lib/supabase/server";
 
@@ -33,6 +34,7 @@ export default async function PublicShopLayout({
       shopSlug={shop.slug}
     >
       <div className="public-storefront-layout">
+        <PwaStatus />
         <header className="public-storefront-toolbar">
           <Link
             aria-label={`Accueil de ${shop.name}`}

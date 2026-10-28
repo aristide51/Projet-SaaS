@@ -203,13 +203,60 @@ function notificationTitle(type: string) {
   const titles: Record<string, string> = {
     order_status: "Mise à jour de commande",
     order_received: "Commande reçue",
+    subscription_reminder: "Échéance d’abonnement",
+    order_declaration_reminder: "Paiement à vérifier",
+    admin_order_declaration_overdue: "Paiement en attente de vérification",
+    booking_reminder: "Rappel de rendez-vous",
+    cron_job_stale: "Alerte des tâches planifiées",
     order_cancellation_request: "Demande d’annulation",
     shop_review: "Décision sur ta boutique",
+    review_invitation: "Donne ton avis",
+    review_report: "Avis signalé",
   };
   return titles[type] ?? "Nouvelle notification";
 }
 
 function notificationText(notification: AppNotification) {
+  if (notification.type === "review_invitation") {
+    const source = jsonString(notification.payload, "source");
+    return source === "booking"
+      ? "Ton rendez-vous est terminé. Tu peux partager ton expérience dans « Mes rendez-vous »."
+      : "Ta commande est terminée. Tu peux partager ton expérience dans « Mes commandes ».";
+  }
+
+  if (notification.type === "review_report") {
+    return "Un avis a été signalé. Consulte la page de modération des avis.";
+  }
+
+  if (notification.type === "booking_reminder") {
+    const stage = jsonString(notification.payload, "reminder_stage");
+    const startsAt = jsonString(notification.payload, "starts_at");
+    const timing = stage === "24_hours" ? "demain" : "dans 2 heures";
+    const appointment = startsAt
+      ? new Intl.DateTimeFormat("fr-FR", {
+          dateStyle: "medium",
+          timeStyle: "short",
+          timeZone: "Africa/Ouagadougou",
+        }).format(new Date(startsAt))
+      : null;
+    return `Ton rendez-vous est prévu ${timing}${appointment ? ` (${appointment})` : ""}. Consulte « Mes rendez-vous » pour le gérer.`;
+  }
+
+  if (notification.type === "subscription_reminder") {
+    const reminder = jsonString(notification.payload, "reminder_key");
+    const timing =
+      reminder === "7_days"
+        ? "dans 7 jours"
+        : reminder === "3_days"
+          ? "dans 3 jours"
+          : null;
+    return timing
+      ? `Ton abonnement arrive à échéance ${timing}. Consulte la page Abonnement pour voir les options disponibles.`
+      : reminder === "due"
+        ? "Ton abonnement est arrivé à échéance. Consulte la page Abonnement pour voir les options disponibles."
+        : "Consulte la page Abonnement pour vérifier ton échéance.";
+  }
+
   if (notification.type === "order_received") {
     const code = jsonString(notification.payload, "code");
     return code
@@ -234,6 +281,24 @@ function notificationText(notification: AppNotification) {
     return code
       ? `La commande ${code} est ${label}.`
       : `Le statut de ta commande a changé : ${label}.`;
+  }
+
+  if (notification.type === "order_declaration_reminder") {
+    const code = jsonString(notification.payload, "order_code");
+    const stage = jsonString(notification.payload, "reminder_stage");
+    const elapsed =
+      stage === "24h" ? "24 heures" : stage === "2h" ? "2 heures" : null;
+    return `Vérifie le paiement déclaré${code ? ` pour la commande ${code}` : ""}${elapsed ? ` : plus de ${elapsed} sans décision` : ""}.`;
+  }
+
+  if (notification.type === "admin_order_declaration_overdue") {
+    const code = jsonString(notification.payload, "order_code");
+    return `La commande déclarée${code ? ` ${code}` : ""} attend une vérification depuis plus de 72 heures.`;
+  }
+
+  if (notification.type === "cron_job_stale") {
+    const jobName = jsonString(notification.payload, "job_name");
+    return `Aucune exécution récente de la tâche planifiée ${jobName ?? "surveillance commandes"}. Vérifie pg_cron.`;
   }
 
   if (notification.type === "shop_review") {

@@ -1,22 +1,36 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  createClient,
+  type SupabaseClient,
+} from "https://esm.sh/@supabase/supabase-js@2";
+import type { Database } from "../../../src/types/database.ts";
+import { signBookingCancelToken } from "../_shared/booking-cancel-token.ts";
 import { buildOrderEmail, sendOrderEmail } from "../_shared/order-email.ts";
+import {
+  decodeFormBody,
+  decodeJsonBody,
+  type EdgeContext,
+  edgeErrorResponse,
+  withEdgeProtection,
+} from "../_shared/edge-protection.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Headers": "content-type, x-notify-secret",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Origin": "*",
-  "Content-Type": "application/json",
-};
 const maxEmailsPerUserPerHour = 10;
 const maxBatchSize = 20;
+type AdminClient = SupabaseClient<Database>;
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function response(status: number, message: string) {
-  return new Response(JSON.stringify({ message }), {
-    status,
-    headers: corsHeaders,
-  });
+  const code =
+    status === 400
+      ? "BAD_REQUEST"
+      : status === 401
+        ? "UNAUTHORIZED"
+        : status === 405
+          ? "METHOD_NOT_ALLOWED"
+          : status === 503 || status === 502
+            ? "SERVICE_UNAVAILABLE"
+            : "INTERNAL_ERROR";
+  return edgeErrorResponse(status, code, undefined, undefined, message);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -102,10 +116,18 @@ async function verifyUnsubscribeToken(token: string, secret: string) {
 }
 
 function htmlResponse(status: number, html: string) {
+  if (status >= 400) {
+    const code =
+      status === 400
+        ? "BAD_REQUEST"
+        : status === 503
+          ? "SERVICE_UNAVAILABLE"
+          : "INTERNAL_ERROR";
+    return edgeErrorResponse(status, code);
+  }
   return new Response(html, {
     status,
     headers: {
-      ...corsHeaders,
       "Content-Type": "text/html; charset=utf-8",
     },
   });
@@ -126,14 +148,15 @@ function escapeHtml(value: string) {
 
 async function handleUnsubscribe(
   request: Request,
-  admin: ReturnType<typeof createClient>,
+  context: EdgeContext,
+  admin: AdminClient,
   unsubscribeSecret: string,
 ) {
   const url = new URL(request.url);
   const token =
     request.method === "GET"
       ? url.searchParams.get("token")
-      : (await request.formData()).get("token");
+      : (await decodeFormBody(context)).get("token");
   if (typeof token !== "string") {
     return htmlResponse(400, "<h1>Lien de désinscription invalide.</h1>");
   }
@@ -144,10 +167,16 @@ async function handleUnsubscribe(
   }
 
   if (request.method === "GET") {
-    const actionUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/notify?action=unsubscribe`;
+    const actionUrl = `${Deno.env.get(
+      "SUPABASE_URL",
+    )}/functions/v1/notify?action=unsubscribe`;
     return htmlResponse(
       200,
-      `<main><h1>Gérer les e-mails non essentiels</h1><p>Les e-mails indispensables au suivi des commandes continueront d’être envoyés.</p><form method="post" action="${escapeHtml(actionUrl)}"><input type="hidden" name="token" value="${escapeHtml(token)}"><button type="submit">Me désinscrire des e-mails non essentiels</button></form></main>`,
+      `<main><h1>Gérer les e-mails non essentiels</h1><p>Les e-mails indispensables au suivi des commandes continueront d’être envoyés.</p><form method="post" action="${escapeHtml(
+        actionUrl,
+      )}"><input type="hidden" name="token" value="${escapeHtml(
+        token,
+      )}"><button type="submit">Me désinscrire des e-mails non essentiels</button></form></main>`,
     );
   }
 
@@ -169,90 +198,112 @@ async function handleUnsubscribe(
   );
 }
 
-Deno.serve(async (request) => {
-  if (request.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+Deno.serve((request) =>
+  withEdgeProtection(
+    request,
+    {
+      policy: (incomingRequest) =>
+        new URL(incomingRequest.url).searchParams.get("action") ===
+        "unsubscribe"
+          ? "unsubscribe"
+          : "notification",
+    },
+    async (context) => {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      const resendApiKey = Deno.env.get("RESEND_API_KEY");
+      const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");
+      const webhookSecret = Deno.env.get("NOTIFY_WEBHOOK_SECRET");
+      const unsubscribeSecret = Deno.env.get("EMAIL_UNSUBSCRIBE_SECRET");
+      if (
+        !supabaseUrl ||
+        !serviceRoleKey ||
+        !resendApiKey ||
+        !fromEmail ||
+        !webhookSecret ||
+        webhookSecret.length < 32 ||
+        !unsubscribeSecret ||
+        unsubscribeSecret.length < 32
+      ) {
+        return response(500, "Le service de notification n’est pas configuré.");
+      }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const resendApiKey = Deno.env.get("RESEND_API_KEY");
-  const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");
-  const webhookSecret = Deno.env.get("NOTIFY_WEBHOOK_SECRET");
-  const unsubscribeSecret = Deno.env.get("EMAIL_UNSUBSCRIBE_SECRET");
-  if (
-    !supabaseUrl ||
-    !serviceRoleKey ||
-    !resendApiKey ||
-    !fromEmail ||
-    !webhookSecret ||
-    webhookSecret.length < 32 ||
-    !unsubscribeSecret ||
-    unsubscribeSecret.length < 32
-  ) {
-    return response(500, "Le service de notification n’est pas configuré.");
-  }
+      const admin = createClient<Database>(supabaseUrl, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const url = new URL(request.url);
+      if (url.searchParams.get("action") === "unsubscribe") {
+        if (request.method !== "GET" && request.method !== "POST") {
+          return response(405, "Méthode non autorisée.");
+        }
+        return handleUnsubscribe(request, context, admin, unsubscribeSecret);
+      }
 
-  const admin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  const url = new URL(request.url);
-  if (url.searchParams.get("action") === "unsubscribe") {
-    if (request.method !== "GET" && request.method !== "POST") {
-      return response(405, "Méthode non autorisée.");
-    }
-    return handleUnsubscribe(request, admin, unsubscribeSecret);
-  }
+      if (request.method !== "POST") {
+        return response(405, "Méthode non autorisée.");
+      }
+      const providedSecret = request.headers.get("x-notify-secret") ?? "";
+      if (!constantTimeEqual(providedSecret, webhookSecret)) {
+        return response(401, "Accès non autorisé.");
+      }
 
-  if (request.method !== "POST") {
-    return response(405, "Méthode non autorisée.");
-  }
-  const providedSecret = request.headers.get("x-notify-secret") ?? "";
-  if (!constantTimeEqual(providedSecret, webhookSecret)) {
-    return response(401, "Accès non autorisé.");
-  }
-
-  let requestedJobId: string | undefined;
-  try {
-    const body: unknown = await request.json();
-    if (!isRecord(body)) return response(400, "Événement invalide.");
-    if (body.job_id !== undefined) {
-      if (typeof body.job_id !== "string" || !uuidPattern.test(body.job_id)) {
+      let requestedJobId: string | undefined;
+      try {
+        const body: unknown = decodeJsonBody(context.body);
+        if (!isRecord(body)) return response(400, "Événement invalide.");
+        if (body.job_id !== undefined) {
+          if (
+            typeof body.job_id !== "string" ||
+            !uuidPattern.test(body.job_id)
+          ) {
+            return response(400, "Événement invalide.");
+          }
+          requestedJobId = body.job_id;
+        }
+      } catch {
         return response(400, "Événement invalide.");
       }
-      requestedJobId = body.job_id;
-    }
-  } catch {
-    return response(400, "Événement invalide.");
-  }
 
-  let jobsQuery = admin
-    .from("notification_email_jobs")
-    .select("id")
-    .eq("status", "queued")
-    .lte("available_at", new Date().toISOString())
-    .lt("attempts", 5)
-    .order("created_at", { ascending: true })
-    .limit(requestedJobId ? 1 : maxBatchSize);
-  if (requestedJobId) jobsQuery = jobsQuery.eq("id", requestedJobId);
-  const { data: jobs, error: jobsError } = await jobsQuery;
-  if (jobsError) return response(503, "La file d’e-mails est indisponible.");
+      let jobsQuery = admin
+        .from("notification_email_jobs")
+        .select("id")
+        .eq("status", "queued")
+        .lte("available_at", new Date().toISOString())
+        .lt("attempts", 5)
+        .order("created_at", { ascending: true })
+        .limit(requestedJobId ? 1 : maxBatchSize);
+      if (requestedJobId) jobsQuery = jobsQuery.eq("id", requestedJobId);
+      const { data: jobs, error: jobsError } = await jobsQuery;
+      if (jobsError) {
+        return response(503, "La file d’e-mails est indisponible.");
+      }
 
-  for (const job of jobs ?? []) {
-    await processJob(admin, job.id, resendApiKey, fromEmail, unsubscribeSecret);
-  }
-  return new Response(JSON.stringify({ processed: jobs?.length ?? 0 }), {
-    status: 202,
-    headers: corsHeaders,
-  });
-});
+      for (const job of jobs ?? []) {
+        await processJob(
+          admin,
+          supabaseUrl,
+          job.id,
+          resendApiKey,
+          fromEmail,
+          unsubscribeSecret,
+          Deno.env.get("BOOKING_CANCEL_TOKEN_SECRET") ?? "",
+          Deno.env.get("APP_BASE_URL") ?? "",
+        );
+      }
+      return Response.json({ processed: jobs?.length ?? 0 }, { status: 202 });
+    },
+  ),
+);
 
 async function processJob(
-  admin: ReturnType<typeof createClient>,
+  admin: AdminClient,
+  supabaseUrl: string,
   jobId: string,
   resendApiKey: string,
   fromEmail: string,
   unsubscribeSecret: string,
+  bookingCancelSecret: string,
+  appBaseUrl: string,
 ) {
   const { data: currentJob } = await admin
     .from("notification_email_jobs")
@@ -327,30 +378,135 @@ async function processJob(
     return;
   }
 
-  const orderId = notification.payload.order_id;
-  if (typeof orderId !== "string" || !uuidPattern.test(orderId)) {
-    await admin
-      .from("notification_email_jobs")
-      .update({ status: "skipped", last_error: "order_reference_missing" })
-      .eq("id", claimedJob.id);
-    return;
+  let shopId: string | undefined;
+  let emailPayload = notification.payload;
+  let bookingCancelUrl: string | undefined;
+  if (notification.type === "subscription_reminder") {
+    const payloadShopId = notification.payload.shop_id;
+    if (typeof payloadShopId === "string" && uuidPattern.test(payloadShopId)) {
+      shopId = payloadShopId;
+    }
+  } else if (notification.type === "booking_reminder") {
+    const bookingId = notification.payload.booking_id;
+    const stage = notification.payload.reminder_stage;
+    if (
+      typeof bookingId !== "string" ||
+      !uuidPattern.test(bookingId) ||
+      (stage !== "24_hours" && stage !== "2_hours")
+    ) {
+      await admin
+        .from("notification_email_jobs")
+        .update({ status: "skipped", last_error: "booking_reference_invalid" })
+        .eq("id", claimedJob.id);
+      return;
+    }
+
+    const { data: booking, error: bookingError } = await admin
+      .from("bookings")
+      .select("shop_id, service_id, status, during")
+      .eq("id", bookingId)
+      .maybeSingle();
+    if (bookingError) {
+      await markForRetry("booking_lookup_failed");
+      return;
+    }
+    if (!booking || !["pending", "confirmed"].includes(booking.status)) {
+      await admin
+        .from("notification_email_jobs")
+        .update({ status: "skipped", last_error: "booking_not_active" })
+        .eq("id", claimedJob.id);
+      return;
+    }
+    const range = typeof booking.during === "string" ? booking.during : "";
+    const rawStartsAt = range.startsWith("[")
+      ? range.slice(1, range.indexOf(","))
+      : "";
+    const normalizedStartsAt = rawStartsAt
+      .replace(" ", "T")
+      .replace(/([+-]\d{2})$/, "$1:00");
+    const appointmentDate = new Date(normalizedStartsAt);
+    if (!rawStartsAt || !Number.isFinite(appointmentDate.getTime())) {
+      await markForRetry("booking_time_invalid");
+      return;
+    }
+    const startsAt = appointmentDate.toISOString();
+    const { data: service, error: serviceError } = await admin
+      .from("services")
+      .select("name")
+      .eq("id", booking.service_id)
+      .maybeSingle();
+    if (serviceError || !service?.name) {
+      await markForRetry("booking_service_lookup_failed");
+      return;
+    }
+    if (!bookingCancelSecret || bookingCancelSecret.length < 32 || !appBaseUrl) {
+      await markForRetry("booking_cancel_link_not_configured");
+      return;
+    }
+    let appOrigin: string;
+    try {
+      const parsedAppUrl = new URL(appBaseUrl);
+      if (
+        parsedAppUrl.protocol !== "https:" &&
+        parsedAppUrl.hostname !== "localhost" &&
+        parsedAppUrl.hostname !== "127.0.0.1"
+      ) {
+        await markForRetry("booking_cancel_link_not_configured");
+        return;
+      }
+      appOrigin = parsedAppUrl.origin;
+    } catch {
+      await markForRetry("booking_cancel_link_not_configured");
+      return;
+    }
+    const { data: expiresAt, error: tokenError } = await admin.rpc(
+      "issue_booking_cancel_token",
+      { p_booking_id: bookingId, p_reminder_stage: stage },
+    );
+    if (tokenError) {
+      await markForRetry("booking_cancel_token_issue_failed");
+      return;
+    }
+    if (expiresAt) {
+      const signedToken = await signBookingCancelToken(
+        {
+          booking_id: bookingId,
+          reminder_stage: stage,
+          expires_at: expiresAt,
+        },
+        bookingCancelSecret,
+      );
+      bookingCancelUrl = `${appOrigin}/booking-cancel?token=${encodeURIComponent(signedToken)}`;
+    }
+    shopId = booking.shop_id;
+    emailPayload = {
+      ...notification.payload,
+      appointment_at: startsAt,
+      service_name: service.name,
+      cancel_url: bookingCancelUrl,
+    };
+  } else {
+    const orderId = notification.payload.order_id;
+    if (typeof orderId === "string" && uuidPattern.test(orderId)) {
+      const { data: order } = await admin
+        .from("orders")
+        .select("shop_id")
+        .eq("id", orderId)
+        .maybeSingle();
+      shopId = order?.shop_id;
+    }
   }
-  const { data: order } = await admin
-    .from("orders")
-    .select("shop_id")
-    .eq("id", orderId)
-    .maybeSingle();
-  if (!order) {
+  if (!shopId) {
     await admin
       .from("notification_email_jobs")
-      .update({ status: "skipped", last_error: "order_not_found" })
+      .update({ status: "skipped", last_error: "shop_reference_missing" })
       .eq("id", claimedJob.id);
     return;
   }
   const { data: shop } = await admin
     .from("shops")
     .select("name")
-    .eq("id", order.shop_id)
+    .eq("id", shopId)
     .maybeSingle();
   const { data: userResult } = await admin.auth.admin.getUserById(
     claimedJob.user_id,
@@ -365,10 +521,12 @@ async function processJob(
     claimedJob.user_id,
     unsubscribeSecret,
   );
-  const unsubscribeUrl = `${supabaseUrl}/functions/v1/notify?action=unsubscribe&token=${encodeURIComponent(token)}`;
+  const unsubscribeUrl = `${supabaseUrl}/functions/v1/notify?action=unsubscribe&token=${encodeURIComponent(
+    token,
+  )}`;
   const content = buildOrderEmail(
     notification.type,
-    notification.payload,
+    emailPayload,
     shop.name,
     unsubscribeUrl,
   );

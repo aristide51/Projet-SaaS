@@ -28,6 +28,36 @@ export default function DashboardPage() {
         <Link className="ui-button ui-button--secondary" href="/dashboard/team">
           Gérer mon équipe
         </Link>
+        <Link
+          className="ui-button ui-button--secondary"
+          href="/dashboard/bookings"
+        >
+          Gérer les rendez-vous
+        </Link>
+        <Link
+          className="ui-button ui-button--secondary"
+          href="/dashboard/promotions"
+        >
+          Gérer les promotions
+        </Link>
+        <Link
+          className="ui-button ui-button--secondary"
+          href="/dashboard/reviews"
+        >
+          Répondre aux avis
+        </Link>
+        <Link
+          className="ui-button ui-button--secondary"
+          href="/dashboard/abonnement"
+        >
+          Gérer mon abonnement
+        </Link>
+        <Link
+          className="ui-button ui-button--secondary"
+          href="/dashboard/payments"
+        >
+          Paiement automatique
+        </Link>
       </section>
     </main>
   );

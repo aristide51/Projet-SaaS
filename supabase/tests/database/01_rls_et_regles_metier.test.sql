@@ -186,6 +186,13 @@ select lives_ok($sql$
     end loop;
   end $block$
 $sql$, '15 produits autorises en plan gratuit');
+select is(
+  public.catalog_product_limit(
+    (select id from public.shops where slug = 'boutique-awa')
+  ),
+  15,
+  'le tableau de bord peut afficher la limite exacte lorsque les quinze places sont utilisees'
+);
 select throws_like($$select public.save_catalog_product((select id from public.shops where slug = 'boutique-awa'), jsonb_build_object('name', 'P16', 'price', 1000, 'status', 'available', 'variants', '[]'::jsonb))$$, 'plan_limit_products%', 'le 16e produit est refuse en plan gratuit');
 select lives_ok($$select public.set_catalog_item_deleted((select id from public.shops where slug = 'boutique-awa'), 'product', tests.v('free_product')::uuid, true)$$, 'le proprietaire place un produit dans la corbeille');
 select lives_ok($$select public.save_catalog_product((select id from public.shops where slug = 'boutique-awa'), jsonb_build_object('name', 'P16', 'price', 1000, 'status', 'available', 'variants', '[]'::jsonb))$$, 'la suppression libere une place dans le plan');
@@ -457,12 +464,22 @@ select tests.as_user('a0000000-0000-0000-0000-000000000006');
 select throws_like(format($$select public.transition_order(%L, 'cancelled')$$, tests.v('o1')), 'transition_not_allowed%', 'le client ne peut plus annuler une commande prete');
 select tests.as_user('a0000000-0000-0000-0000-000000000002');
 select lives_ok(format($$select public.transition_order(%L, 'completed')$$, tests.v('o1')), 'commande terminee');
+select tests.as_postgres();
+select is(
+  (select count(*) from public.notifications
+   where user_id = 'a0000000-0000-0000-0000-000000000006'
+     and type = 'review_invitation'
+     and payload ->> 'order_id' = tests.v('o1')),
+  1::bigint,
+  'une commande terminee envoie une invitation a evaluer'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000002');
 select throws_like(format($$select public.transition_order(%L, 'refunded', null, 'x')$$, tests.v('o1')), 'transition_not_allowed%', 'un statut final est definitif');
 select tests.as_postgres();
 select is((select count(*) from public.order_status_history where order_id = tests.v('o1')::uuid), 6::bigint, 'historique complet (6 lignes)');
 select ok((select count(*) from public.audit_log where entity_id = tests.v('o1')::uuid and action = 'order.paid') = 1, 'paiement manuel journalise dans audit_log');
 select tests.as_user('a0000000-0000-0000-0000-000000000006');
-select is((select count(*) from public.notifications), 6::bigint, 'c1 recoit la commande et ses 5 changements de statut');
+select is((select count(*) from public.notifications), 7::bigint, 'c1 recoit la commande, ses changements de statut et son invitation a noter');
 select is((select count(*) from public.notifications where type = 'order_received'), 1::bigint, 'une nouvelle commande cree une notification de reception');
 select tests.as_postgres();
 select is((select count(*) from public.notification_email_jobs j
@@ -530,8 +547,19 @@ select lives_ok(
 -- Promotions
 select tests.as_user('a0000000-0000-0000-0000-000000000003');
 select throws_like($$insert into public.coupons (shop_id, code, type, value) values ('50000000-0000-0000-0000-000000000002', 'NOEL', 'percent', 10)$$, 'plan_feature_promotions%', 'les promotions exigent le plan Pro');
+select throws_like($$select public.save_coupon('50000000-0000-0000-0000-000000000002', 'NOEL2', 'percent', 10, 0, 1, '{}'::jsonb, true)$$, 'plan_feature_promotions%', 'la RPC refuse une promotion sur le plan gratuit');
+select tests.as_user('a0000000-0000-0000-0000-000000000002');
+select tests.as_postgres();
+update public.products set category_id = 'd0000000-0000-0000-0000-000000000001'
+where id = 'b0000000-0000-0000-0000-000000000001';
+update public.products set category_id = 'd0000000-0000-0000-0000-000000000002'
+where id = 'b0000000-0000-0000-0000-000000000002';
 select tests.as_user('a0000000-0000-0000-0000-000000000002');
 select lives_ok($$insert into public.coupons (shop_id, code, type, value) values ('50000000-0000-0000-0000-000000000001', 'PROMO10', 'percent', 10)$$, 'm1 cree un code promo');
+select lives_ok($$select public.save_coupon('50000000-0000-0000-0000-000000000001', 'PRODUIT10', 'percent', 10, 0, 1, '{"product_ids":["b0000000-0000-0000-0000-000000000001"],"category_ids":[]}'::jsonb, true)$$, 'la RPC cree un coupon cible sur un produit');
+select lives_ok($$select public.save_coupon('50000000-0000-0000-0000-000000000001', 'CATEGORIE10', 'percent', 10, 0, 1, '{"product_ids":[],"category_ids":["d0000000-0000-0000-0000-000000000002"]}'::jsonb, true)$$, 'la RPC cree un coupon cible sur une categorie');
+select throws_like($$select public.save_coupon('50000000-0000-0000-0000-000000000001', 'HORSBOUTIQUE', 'percent', 10, 0, 1, '{"product_ids":["b0000000-0000-0000-0000-000000000004"],"category_ids":[]}'::jsonb, true)$$, 'coupon_scope_product_invalid%', 'une portee coupon ne peut pas viser le produit d''une autre boutique');
+select throws_like($$select public.save_coupon('50000000-0000-0000-0000-000000000001', 'SCOPEINVALIDE', 'percent', 10, 0, 1, '{"product_ids":"pas-une-liste"}'::jsonb, true)$$, 'coupon_invalid%', 'une portee malformee est refusee sans erreur interne');
 select tests.as_postgres();
 update public.shop_settings set delivery_enabled = true
 where shop_id = '50000000-0000-0000-0000-000000000001';
@@ -543,6 +571,27 @@ select lives_ok(
     null, 1, null
   )$$,
   'c1 ajoute un article en stock suivi au panier'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000006');
+select is(
+  (select discount from public.preview_order(
+    (select id from public.carts
+     where customer_id = 'a0000000-0000-0000-0000-000000000006'
+       and shop_id = '50000000-0000-0000-0000-000000000001'),
+    'cash_on_delivery', 'pickup', 'PRODUIT10'
+  )),
+  500,
+  'le coupon produit ne réduit que la ligne ciblée'
+);
+select is(
+  (select discount from public.preview_order(
+    (select id from public.carts
+     where customer_id = 'a0000000-0000-0000-0000-000000000006'
+       and shop_id = '50000000-0000-0000-0000-000000000001'),
+    'cash_on_delivery', 'pickup', 'CATEGORIE10'
+  )),
+  1500,
+  'le coupon catégorie ne réduit que les produits de cette catégorie'
 );
 select tests.as_postgres();
 insert into ctx values
@@ -717,13 +766,118 @@ select tests.as_user('a0000000-0000-0000-0000-000000000007');
 select lives_ok(format($$select public.set_booking_status(%L, 'cancelled')$$, tests.v('b3')), 'annulation client dans les delais');
 select tests.as_user('a0000000-0000-0000-0000-000000000006');
 select throws_like(format($$select public.set_booking_status(%L, 'cancelled')$$, tests.v('b3')), 'forbidden%', 'on n''annule pas la reservation d''un autre');
+select tests.as_user('a0000000-0000-0000-0000-000000000007');
+select lives_ok(format($$insert into ctx select 'b4', public.book_slot(%L, %L, %L::timestamptz)::text$$, 'c0000000-0000-0000-0000-000000000001', tests.v('r1'), tests.v('mon9')), 'le client reprend le creneau libere');
+select tests.as_postgres();
+update public.bookings
+set during = tstzrange(now() - interval '2 hours', now() - interval '1 hour', '[)')
+where id = tests.v('b4')::uuid;
+select tests.as_user('a0000000-0000-0000-0000-000000000002');
+select lives_ok(format($$select public.set_booking_status(%L, 'confirmed')$$, tests.v('b4')), 'le commercant confirme le rendez-vous termine');
+select lives_ok(format($$select public.set_booking_status(%L, 'completed')$$, tests.v('b4')), 'le commercant termine le rendez-vous');
+select tests.as_postgres();
+select is(
+  (select count(*) from public.notifications
+   where user_id = 'a0000000-0000-0000-0000-000000000007'
+     and type = 'review_invitation'
+     and payload ->> 'booking_id' = tests.v('b4')),
+  1::bigint,
+  'un rendez-vous termine envoie une invitation a evaluer'
+);
 
 -- =====================================================================
 -- F. Avis verifies
 -- =====================================================================
+select tests.as_postgres();
+update public.bookings
+set customer_id = 'a0000000-0000-0000-0000-000000000006',
+    status = 'completed'
+where id in (tests.v('b3')::uuid, tests.v('b4')::uuid);
 select tests.as_user('a0000000-0000-0000-0000-000000000006');
 select throws_like(format($$insert into public.reviews (shop_id, customer_id, order_id, rating) values (%L, %L, %L, 5)$$, '50000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000006', tests.v('o3')), 'review_not_allowed%', 'avis refuse tant que la commande n''est pas terminee');
 select lives_ok(format($$insert into public.reviews (shop_id, customer_id, order_id, rating, comment) values (%L, %L, %L, 5, 'Tres bien')$$, '50000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000006', tests.v('o1')), 'avis sur commande terminee');
+insert into ctx select 'review_id', id::text from public.reviews where order_id = tests.v('o1')::uuid;
+select throws_like(
+  format(
+    $$insert into public.reviews (shop_id, customer_id, booking_id, rating, comment) values (%L, %L, %L, 5, ' tres   bien ')$$,
+    '50000000-0000-0000-0000-000000000001',
+    'a0000000-0000-0000-0000-000000000006',
+    tests.v('b3')
+  ),
+  'review_spam_repeated%',
+  'un commentaire court identique publie dans les dernieres 24h est refuse'
+);
+select throws_like(
+  format(
+    $$insert into public.reviews (shop_id, customer_id, booking_id, rating, comment) values (%L, %L, %L, 5, 'Consulte https://example.com')$$,
+    '50000000-0000-0000-0000-000000000001',
+    'a0000000-0000-0000-0000-000000000006',
+    tests.v('b3')
+  ),
+  'review_contains_link%',
+  'les liens sont refuses dans le commentaire d''un avis'
+);
+select lives_ok(
+  format(
+    $$insert into public.reviews (shop_id, customer_id, booking_id, rating, comment) values (%L, %L, %L, 4, 'Belle experience')$$,
+    '50000000-0000-0000-0000-000000000001',
+    'a0000000-0000-0000-0000-000000000006',
+    tests.v('b3')
+  ),
+  'le client peut publier un autre avis admissible dans la limite horaire'
+);
+select lives_ok(
+  format(
+    $$insert into public.reviews (shop_id, customer_id, booking_id, rating, comment) values (%L, %L, %L, 4, 'Produit conforme')$$,
+    '50000000-0000-0000-0000-000000000001',
+    'a0000000-0000-0000-0000-000000000006',
+    tests.v('b4')
+  ),
+  'un deuxieme avis distinct reste dans la limite de trois par heure'
+);
+select throws_like(
+  format(
+    $$insert into public.reviews (shop_id, customer_id, booking_id, rating, comment) values (%L, %L, %L, 4, 'Très bon service')$$,
+    '50000000-0000-0000-0000-000000000001',
+    'a0000000-0000-0000-0000-000000000006',
+    tests.v('b3')
+  ),
+  'review_rate_limited%',
+  'le quatrieme avis dans la meme heure est limite'
+);
+delete from public.reviews where booking_id in (tests.v('b3')::uuid, tests.v('b4')::uuid);
+select tests.as_postgres();
+delete from private.review_submission_limits
+where customer_id = 'a0000000-0000-0000-0000-000000000006';
+select tests.as_user('a0000000-0000-0000-0000-000000000006');
+select lives_ok(
+  format(
+    $$insert into storage.objects (bucket_id, name, owner) values ('review-photos', %L, %L)$$,
+    '50000000-0000-0000-0000-000000000001/a0000000-0000-0000-0000-000000000006/' || tests.v('review_id') || '/e0000000-0000-0000-0000-000000000001.webp',
+    'a0000000-0000-0000-0000-000000000006'
+  ),
+  'le client ajoute une photo dans le dossier de son avis'
+);
+select lives_ok(
+  format(
+    $$update public.reviews set photo_paths = array[%L] where id = %L::uuid$$,
+    '50000000-0000-0000-0000-000000000001/a0000000-0000-0000-0000-000000000006/' || tests.v('review_id') || '/e0000000-0000-0000-0000-000000000001.webp',
+    tests.v('review_id')
+  ),
+  'la photo existante est associee a l''avis'
+);
+select throws_like(
+  format(
+    $$update public.reviews set photo_paths = array[%L,%L,%L,%L] where id = %L::uuid$$,
+    '50000000-0000-0000-0000-000000000001/a0000000-0000-0000-0000-000000000006/' || tests.v('review_id') || '/e0000000-0000-0000-0000-000000000001.webp',
+    '50000000-0000-0000-0000-000000000001/a0000000-0000-0000-0000-000000000006/' || tests.v('review_id') || '/e0000000-0000-0000-0000-000000000001.webp',
+    '50000000-0000-0000-0000-000000000001/a0000000-0000-0000-0000-000000000006/' || tests.v('review_id') || '/e0000000-0000-0000-0000-000000000001.webp',
+    '50000000-0000-0000-0000-000000000001/a0000000-0000-0000-0000-000000000006/' || tests.v('review_id') || '/e0000000-0000-0000-0000-000000000001.webp',
+    tests.v('review_id')
+  ),
+  'review_photo_limit%',
+  'un avis ne peut pas contenir plus de trois photos'
+);
 select is((select author_name from public.reviews where order_id = tests.v('o1')::uuid), 'Awa O.', 'nom d''auteur abrege');
 select throws_ok(format($$insert into public.reviews (shop_id, customer_id, order_id, rating) values (%L, %L, %L, 4)$$, '50000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000006', tests.v('o1')), '23505', null, 'un seul avis par commande');
 select throws_ok(format($$insert into public.reviews (shop_id, customer_id, order_id, rating) values (%L, %L, %L, 6)$$, '50000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000006', tests.v('o1')), '23514', null, 'note hors 1-5 refusee');
@@ -739,8 +893,44 @@ select tests.as_user('a0000000-0000-0000-0000-000000000002');
 select lives_ok(format($$select public.reply_to_review(%L, 'Merci Awa !')$$, (select id::text from public.reviews limit 1)), 'le commercant repond a l''avis');
 select tests.as_anon();
 select is((select shop_reply from public.reviews limit 1), 'Merci Awa !', 'la reponse est publique');
+select is(
+  (select count(*) from public.storefront_reviews(
+    '50000000-0000-0000-0000-000000000001', null, 20
+  )),
+  1::bigint,
+  'la RPC publique renvoie les avis publies de la boutique'
+);
+select is(
+  (select count(*) from public.storefront_reviews(
+    '50000000-0000-0000-0000-000000000001',
+    'b0000000-0000-0000-0000-000000000001',
+    20
+  )),
+  1::bigint,
+  'la RPC publique filtre les avis par produit achete'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000007');
+select lives_ok(format($$select public.report_review(%L, 'Avis inapproprie')$$, (select id::text from public.reviews limit 1)), 'un autre client peut signaler un avis public');
+select throws_like(format($$select public.report_review(%L, 'Avis inapproprie')$$, (select id::text from public.reviews limit 1)), 'review_already_reported%', 'un meme client ne signale pas deux fois le meme avis');
+select is((select count(*) from public.review_reports), 0::bigint, 'les signalements restent invisibles aux clients');
+select is((select count(*) from public.review_moderation_history), 0::bigint, 'l''historique de modération reste privé pour les clients');
+select throws_ok(
+  format(
+    $$select public.moderate_review(%L, 'hidden', 'Motif de test')$$,
+    (select id::text from public.reviews limit 1)
+  ),
+  '42501',
+  null,
+  'un client ne peut pas modérer un avis'
+);
 select tests.as_user('a0000000-0000-0000-0000-000000000001');
-select lives_ok(format($$select public.moderate_review(%L, 'hidden')$$, (select id::text from public.reviews limit 1)), 'l''admin masque un avis');
+select is((select count(*) from public.review_reports where status = 'open'), 1::bigint, 'le signalement est visible au back-office admin');
+select lives_ok(format($$select public.moderate_review(%L, 'hidden', 'Avis contraire aux règles')$$, (select id::text from public.reviews limit 1)), 'l''admin masque un avis via moderate_review');
+select is((select new_status::text from public.review_moderation_history order by created_at desc limit 1), 'hidden', 'le changement de statut est ajouté a l''historique');
+select is((select reason from public.review_moderation_history order by created_at desc limit 1), 'Avis contraire aux règles', 'le motif de modération est conservé');
+select is((select count(*) from public.review_moderation_history), 1::bigint, 'une seule entrée est créée pour cette décision');
+select lives_ok(format($$select public.resolve_review_report(%L, 'resolved')$$, (select id::text from public.review_reports limit 1)), 'l''admin peut clôturer le signalement apres sa décision');
+select is((select status::text from public.reviews limit 1), 'hidden', 'la clôture du signalement ne modifie pas le statut choisi par l''admin');
 select tests.as_anon();
 select is((select count(*) from public.reviews), 0::bigint, 'un avis masque disparait de la vue publique');
 select tests.as_postgres();
@@ -1144,5 +1334,852 @@ select is(
   'cancelled', 'la demande sans paiement est resolue'
 );
 
+-- ---------- Rappels cron et traitement idempotent des webhooks ----------
+select tests.as_postgres();
+insert into public.orders (
+  id, shop_id, customer_id, status, payment_method, fulfillment, subtotal, discount, total
+) values (
+  '90000000-0000-0000-0000-000000000003',
+  '50000000-0000-0000-0000-000000000001',
+  'a0000000-0000-0000-0000-000000000006',
+  'payment_declared', 'ussd_orange', 'pickup', 1000, 0, 1000
+);
+insert into public.order_status_history (
+  shop_id, order_id, from_status, to_status, actor_type
+) values (
+  '50000000-0000-0000-0000-000000000001',
+  '90000000-0000-0000-0000-000000000003',
+  'pending_payment', 'payment_declared', 'customer'
+);
+select is(
+  public.remind_pending_declarations(), 0,
+  'aucun rappel avant deux heures apres la declaration'
+);
+update public.order_status_history
+set created_at = now() - interval '3 hours'
+where order_id = '90000000-0000-0000-0000-000000000003'
+  and to_status = 'payment_declared';
+select is(
+  public.remind_pending_declarations(), 1,
+  'le rappel commerçant de deux heures est cree'
+);
+select is(
+  public.remind_pending_declarations(), 0,
+  'le rappel de deux heures n''est pas emis deux fois'
+);
+update public.order_status_history
+set created_at = now() - interval '25 hours'
+where order_id = '90000000-0000-0000-0000-000000000003'
+  and to_status = 'payment_declared';
+select is(
+  public.remind_pending_declarations(), 1,
+  'le second rappel commerçant est cree apres vingt-quatre heures'
+);
+update public.order_status_history
+set created_at = now() - interval '73 hours'
+where order_id = '90000000-0000-0000-0000-000000000003'
+  and to_status = 'payment_declared';
+select is(
+  public.remind_pending_declarations(), 1,
+  'l''alerte administrateur est creee apres soixante-douze heures'
+);
+select is(
+  (select count(*) from public.notifications
+   where type = 'order_declaration_reminder'
+     and payload ->> 'order_code' = (
+       select code from public.orders where id = '90000000-0000-0000-0000-000000000003'
+     )),
+  4::bigint,
+  'les rappels 2h et 24h touchent le proprietaire et l''employe commandes'
+);
+select is(
+  (select count(*) from public.notifications
+   where user_id = 'a0000000-0000-0000-0000-000000000001'
+     and type = 'admin_order_declaration_overdue'
+     and payload ->> 'order_code' = (
+       select code from public.orders where id = '90000000-0000-0000-0000-000000000003'
+     )),
+  1::bigint,
+  'l''administrateur reçoit une seule alerte apres 72h'
+);
+select is(
+  (select status::text from public.orders where id = '90000000-0000-0000-0000-000000000003'),
+  'payment_declared',
+  'les rappels ne changent jamais le statut payment_declared'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000006');
+select throws_ok(
+  $$select * from private.order_declaration_reminders$$,
+  '42501', null, 'la table de deduplication des rappels est privee'
+);
+select tests.as_postgres();
+select is(
+  (select count(*) from cron.job
+   where jobname in (
+     'expire-pending-orders',
+     'remind-pending-declarations',
+     'reconcile-stale-aggregator-payments',
+     'monitor-order-cron-jobs',
+     'process-booking-reminders',
+     'monitor-booking-reminder-cron'
+   )),
+  6::bigint,
+  'les six tâches cron sont planifiees'
+);
+
+insert into public.orders (
+  id, shop_id, customer_id, status, payment_method, fulfillment, subtotal, discount, total
+) values
+  ('90000000-0000-0000-0000-000000000004',
+   '50000000-0000-0000-0000-000000000001',
+   'a0000000-0000-0000-0000-000000000006',
+   'pending_payment', 'aggregator', 'pickup', 2000, 0, 2000),
+  ('90000000-0000-0000-0000-000000000005',
+   '50000000-0000-0000-0000-000000000001',
+   'a0000000-0000-0000-0000-000000000006',
+   'pending_payment', 'aggregator', 'pickup', 3000, 0, 3000);
+insert into public.payments (
+  id, shop_id, order_id, provider, idempotency_key, amount, status
+) values
+  ('a9000000-0000-0000-0000-000000000001',
+   '50000000-0000-0000-0000-000000000001',
+   '90000000-0000-0000-0000-000000000004',
+   'fake', 'e2e-payment-pending', 2000, 'pending'),
+  ('a9000000-0000-0000-0000-000000000002',
+   '50000000-0000-0000-0000-000000000001',
+   '90000000-0000-0000-0000-000000000005',
+   'fake', 'e2e-payment-confirmed', 3000, 'pending');
+select throws_ok(
+  $$insert into public.payments (
+    shop_id, order_id, provider, idempotency_key, amount
+  ) values (
+    '50000000-0000-0000-0000-000000000001',
+    '90000000-0000-0000-0000-000000000004',
+    'fake', 'e2e-payment-pending', 2000
+  )$$,
+  '23505', null, 'une cle d''idempotence ne peut pas creer un second paiement'
+);
+
+select tests.as_user('a0000000-0000-0000-0000-000000000006');
+select throws_ok(
+  $$select public.process_aggregator_webhook(
+    'fake', 'unauthorized-event', 'a9000000-0000-0000-0000-000000000002',
+    'fake-ref-2', 'succeeded', '{}'::jsonb
+  )$$,
+  '42501', null, 'un client ne peut pas traiter un webhook agrégateur'
+);
+select tests.as_service();
+select is(
+  public.process_aggregator_webhook(
+    'fake', 'event-pending-1', 'a9000000-0000-0000-0000-000000000001',
+    'fake-ref-1', 'pending', '{"source":"test"}'::jsonb
+  ),
+  'recorded',
+  'un statut fournisseur non confirme est enregistre sans payer la commande'
+);
+select is(
+  (select status::text from public.orders where id = '90000000-0000-0000-0000-000000000004'),
+  'pending_payment',
+  'un statut fournisseur non confirme ne change pas la commande'
+);
+select is(
+  public.process_aggregator_webhook(
+    'fake', 'event-pending-1', 'a9000000-0000-0000-0000-000000000001',
+    'fake-ref-1', 'pending', '{"source":"test"}'::jsonb
+  ),
+  'duplicate',
+  'la relecture d''un webhook deja traite est ignoree'
+);
+select is(
+  public.process_aggregator_webhook(
+    'fake', 'event-succeeded-1', 'a9000000-0000-0000-0000-000000000002',
+    'fake-ref-2', 'succeeded', '{"source":"test"}'::jsonb
+  ),
+  'paid',
+  'un statut confirme par le fournisseur paie via transition_order'
+);
+select is(
+  public.process_aggregator_webhook(
+    'fake', 'event-succeeded-1', 'a9000000-0000-0000-0000-000000000002',
+    'fake-ref-2', 'succeeded', '{"source":"test"}'::jsonb
+  ),
+  'duplicate',
+  'un webhook confirme rejoue ne cree pas une seconde transition'
+);
+select tests.as_postgres();
+select is(
+  (select status::text from public.orders where id = '90000000-0000-0000-0000-000000000005'),
+  'paid',
+  'la commande payee par webhook a un statut final coherent'
+);
+select is(
+  (select count(*) from public.order_status_history
+   where order_id = '90000000-0000-0000-0000-000000000005'
+     and to_status = 'paid'),
+  1::bigint,
+  'le webhook idempotent ajoute une seule transition a l''historique'
+);
+
+-- ---------- Limitation de débit des Edge Functions ----------
+select tests.as_user('a0000000-0000-0000-0000-000000000006');
+select throws_ok(
+  $$select * from public.consume_edge_rate_limit(
+    'login:ip', repeat('a', 64), 1, 60
+  )$$,
+  '42501', null, 'un compte client ne peut pas consommer le compteur Edge'
+);
+select tests.as_service();
+select is(
+  (select allowed from public.consume_edge_rate_limit(
+    'login:ip', repeat('b', 64), 1, 60
+  )),
+  true,
+  'la premiere requete respecte le quota'
+);
+select is(
+  (select allowed from public.consume_edge_rate_limit(
+    'login:ip', repeat('b', 64), 1, 60
+  )),
+  false,
+  'la requete suivante depasse le quota'
+);
+select ok(
+  (select retry_after >= 1 from public.consume_edge_rate_limit(
+    'login:ip', repeat('b', 64), 1, 60
+  )),
+  'le compteur fournit un delai de reprise positif'
+);
+select is(
+  (select allowed from public.consume_edge_rate_limit(
+    'login:user', repeat('b', 64), 1, 60
+  )),
+  true,
+  'les compteurs IP et utilisateur sont independants'
+);
+select throws_ok(
+  $$select * from public.consume_edge_rate_limit(
+    'invalid', repeat('b', 64), 1, 60
+  )$$,
+  '22023', null, 'une categorie de compteur inconnue est rejetee'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000006');
+select throws_ok(
+  $$select * from private.edge_rate_limit_counters$$,
+  '42501', null, 'un client ne peut pas lire les compteurs IP'
+);
+select tests.as_service();
+select throws_ok(
+  $$select * from private.edge_rate_limit_counters$$,
+  '42501', null, 'service_role ne lit les compteurs que par la RPC'
+);
+
+-- ---------- Abonnements et generation des factures ----------
+select tests.as_postgres();
+update public.subscriptions
+set plan_id = (select id from public.plans where code = 'pro'),
+    status = 'active',
+    current_period_end = now() + interval '6 days'
+where shop_id = '50000000-0000-0000-0000-000000000001';
+update public.subscriptions
+set current_period_end = now() + interval '6 days'
+where shop_id = '50000000-0000-0000-0000-000000000002';
+update public.subscriptions
+set plan_id = (select id from public.plans where code = 'pro'),
+    status = 'active',
+    current_period_end = now() + interval '8 days'
+where shop_id = '50000000-0000-0000-0000-000000000003';
+select tests.as_user('a0000000-0000-0000-0000-000000000002');
+select is(
+  public.catalog_product_limit('50000000-0000-0000-0000-000000000001'),
+  null::integer,
+  'le proprietaire consulte la limite produit illimitee de son plan Pro'
+);
+select is(
+  public.shop_staff_limit('50000000-0000-0000-0000-000000000001'),
+  3,
+  'la limite d''equipe provient du plan actif en base'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000003');
+select is(
+  public.catalog_product_limit('50000000-0000-0000-0000-000000000002'),
+  15,
+  'le plan Gratuit expose sa limite produit de quinze'
+);
+select tests.as_postgres();
+select tests.as_user('a0000000-0000-0000-0000-000000000006');
+select throws_ok(
+  $$select public.generate_due_invoices()$$,
+  '42501', null, 'un client ne peut pas generer les factures'
+);
+select tests.as_service();
+select is(
+  public.generate_due_invoices(),
+  1,
+  'une facture payante est generee sept jours avant echeance'
+);
+select is(
+  (select count(*) from public.invoices
+   where shop_id = '50000000-0000-0000-0000-000000000001'),
+  1::bigint,
+  'une seule facture est creee pour la periode'
+);
+select is(
+  (select amount from public.invoices
+   where shop_id = '50000000-0000-0000-0000-000000000001'),
+  7500,
+  'le montant correspond au tarif mensuel du plan Pro'
+);
+select is(
+  (select status::text from public.invoices
+   where shop_id = '50000000-0000-0000-0000-000000000001'),
+  'open',
+  'la facture est ouverte au moment de sa creation'
+);
+select is(
+  (select invoice_number from public.invoices
+   where shop_id = '50000000-0000-0000-0000-000000000001'),
+  1::bigint,
+  'la premiere facture recoit un numero sequentiel'
+);
+select ok(
+  (select period_start < period_end
+      and period_start = period_end - interval '1 month'
+      and due_at = period_end
+   from public.invoices
+   where shop_id = '50000000-0000-0000-0000-000000000001'),
+  'la facture couvre une periode mensuelle et arrive a echeance en fin de periode'
+);
+select is(
+  public.generate_due_invoices(),
+  0,
+  'relancer la generation ne cree pas de doublon'
+);
+select tests.as_postgres();
+select is(
+  (select count(*) from public.invoices
+   where shop_id in (
+     '50000000-0000-0000-0000-000000000002',
+     '50000000-0000-0000-0000-000000000003'
+   )),
+  0::bigint,
+  'les plans gratuits et les echeances a plus de sept jours ne sont pas factures'
+);
+select ok(
+  exists (select 1 from cron.job where jobname = 'generate-due-invoices'),
+  'la generation quotidienne des factures est planifiee'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000004');
+select is(
+  (select count(*) from public.invoices),
+  0::bigint,
+  'un employe ne voit pas les factures de sa boutique'
+);
+select tests.as_postgres();
+update public.invoices
+set pdf_path = shop_id::text || '/' || id::text || '.pdf'
+where shop_id = '50000000-0000-0000-0000-000000000001';
+insert into storage.objects (bucket_id, name, owner)
+select 'subscription-receipts', pdf_path, 'a0000000-0000-0000-0000-000000000002'
+from public.invoices
+where shop_id = '50000000-0000-0000-0000-000000000001';
+select tests.as_anon();
+select is(
+  (select count(*) from storage.objects
+   where bucket_id = 'subscription-receipts'),
+  0::bigint,
+  'les fichiers de factures ne sont pas publics'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000002');
+select is(
+  (select count(*) from storage.objects
+   where bucket_id = 'subscription-receipts'),
+  1::bigint,
+  'le proprietaire accede au PDF de sa facture'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000004');
+select is(
+  (select count(*) from storage.objects
+   where bucket_id = 'subscription-receipts'),
+  0::bigint,
+  'un employe ne peut pas acceder au PDF de la facture'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000003');
+select is(
+  (select count(*) from storage.objects
+   where bucket_id = 'subscription-receipts'),
+  0::bigint,
+  'un autre commercant ne voit pas le PDF de cette facture'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000001');
+select is(
+  (select count(*) from storage.objects
+   where bucket_id = 'subscription-receipts'),
+  1::bigint,
+  'un administrateur accede au PDF de la facture'
+);
+select tests.as_postgres();
+insert into public.invoices (
+  shop_id, plan_id, amount, status, period_start, period_end, due_at
+)
+select
+  shop_id,
+  plan_id,
+  amount,
+  'void',
+  period_start - interval '2 months',
+  period_start - interval '1 month',
+  period_start - interval '1 month'
+from public.invoices
+where shop_id = '50000000-0000-0000-0000-000000000001'
+limit 1;
+select is(
+  (select invoice_number from public.invoices
+   where shop_id = '50000000-0000-0000-0000-000000000001'
+     and status = 'void'),
+  2::bigint,
+  'la facture suivante recoit le numero suivant, meme si elle est annulee'
+);
+select ok(
+  (select max(invoice_number) - min(invoice_number) + 1 = count(*)
+   from public.invoices
+   where shop_id = '50000000-0000-0000-0000-000000000001'),
+  'la numerotation conserve les numeros des factures annulees sans trou'
+);
+select throws_ok(
+  $$update public.invoices set invoice_number = 99
+    where shop_id = '50000000-0000-0000-0000-000000000001'
+      and status = 'open'$$,
+  'P0001', null, 'le numero d''une facture ne peut pas etre modifie'
+);
+select throws_ok(
+  $$delete from public.invoices
+    where shop_id = '50000000-0000-0000-0000-000000000001'
+      and status = 'open'$$,
+  'P0001', null, 'une facture ne peut pas etre supprimee'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000002');
+select is(
+  (select count(*) from public.invoices),
+  2::bigint,
+  'le proprietaire voit toutes les factures de sa boutique'
+);
+
+-- ---------- Cycle de vie des abonnements ----------
+select tests.as_postgres();
+insert into public.products (
+  shop_id, name, price, status, created_at
+)
+select
+  '50000000-0000-0000-0000-000000000001',
+  'Plan overflow ' || series,
+  1000,
+  'available',
+  now() + interval '100 days' + make_interval(secs => series)
+from generate_series(1, 16) as series;
+insert into ctx
+select 'plan_hidden_product', id::text
+from public.products
+where shop_id = '50000000-0000-0000-0000-000000000001'
+  and name = 'Plan overflow 16';
+update public.products
+set created_at = now() - interval '1 year'
+where id = 'b0000000-0000-0000-0000-000000000001';
+insert into public.carts (shop_id, customer_id)
+values (
+  '50000000-0000-0000-0000-000000000001',
+  'a0000000-0000-0000-0000-000000000007'
+)
+on conflict (shop_id, customer_id) do nothing;
+insert into public.cart_items (cart_id, shop_id, product_id, quantity)
+select cart.id, cart.shop_id, product.id, 1
+from public.carts cart
+join public.products product
+  on product.shop_id = cart.shop_id
+  and product.name = 'Plan overflow 16'
+where cart.shop_id = '50000000-0000-0000-0000-000000000001'
+  and cart.customer_id = 'a0000000-0000-0000-0000-000000000007';
+insert into public.orders (
+  id, shop_id, customer_id, payment_method, subtotal, total
+) values (
+  '90000000-0000-0000-0000-000000000010',
+  '50000000-0000-0000-0000-000000000001',
+  'a0000000-0000-0000-0000-000000000006',
+  'ussd_orange',
+  1000,
+  1000
+);
+update public.subscriptions
+set status = 'active',
+    plan_id = (select id from public.plans where code = 'pro'),
+    current_period_end = now() + interval '6 days 12 hours',
+    grace_until = null
+where shop_id = '50000000-0000-0000-0000-000000000001';
+
+select tests.as_user('a0000000-0000-0000-0000-000000000006');
+select throws_ok(
+  $$select public.process_subscription_lifecycle()$$,
+  '42501', null, 'un client ne peut pas exécuter le cycle de vie'
+);
+select tests.as_service();
+select is(
+  public.process_subscription_lifecycle(),
+  1,
+  'un rappel J-7 est envoyé pour l’abonnement payant'
+);
+select tests.as_postgres();
+select is(
+  (select count(*) from public.notifications
+   where user_id = 'a0000000-0000-0000-0000-000000000002'
+     and type = 'subscription_reminder'
+     and payload ->> 'reminder_key' = '7_days'),
+  1::bigint,
+  'le rappel J-7 crée une notification pour le propriétaire'
+);
+select is(
+  (select count(*) from public.notification_email_jobs jobs
+   join public.notifications notification on notification.id = jobs.notification_id
+   where notification.type = 'subscription_reminder'
+     and notification.payload ->> 'reminder_key' = '7_days'),
+  1::bigint,
+  'le rappel J-7 est également placé dans la file e-mail'
+);
+select tests.as_service();
+select is(
+  public.process_subscription_lifecycle(),
+  0,
+  'relancer le cycle ne duplique pas le rappel J-7'
+);
+select tests.as_postgres();
+update public.subscriptions
+set current_period_end = now() + interval '2 days 12 hours'
+where shop_id = '50000000-0000-0000-0000-000000000001';
+select tests.as_service();
+select is(
+  public.process_subscription_lifecycle(),
+  1,
+  'un rappel J-3 est envoyé dans sa fenêtre'
+);
+select tests.as_postgres();
+select is(
+  (select count(*) from public.notifications
+   where user_id = 'a0000000-0000-0000-0000-000000000002'
+     and type = 'subscription_reminder'
+     and payload ->> 'reminder_key' = '3_days'),
+  1::bigint,
+  'le rappel J-3 est bien notifié'
+);
+update public.subscriptions
+set current_period_end = now() - interval '1 hour',
+    grace_until = null
+where shop_id = '50000000-0000-0000-0000-000000000001';
+select tests.as_service();
+select is(
+  public.process_subscription_lifecycle(),
+  2,
+  'à échéance, le plan passe en retard et le rappel J0 est envoyé'
+);
+select tests.as_postgres();
+select is(
+  (select status::text from public.subscriptions
+   where shop_id = '50000000-0000-0000-0000-000000000001'),
+  'past_due',
+  'l’abonnement passe à past_due à son échéance'
+);
+select ok(
+  (select grace_until = current_period_end + interval '7 days'
+   from public.subscriptions
+   where shop_id = '50000000-0000-0000-0000-000000000001'),
+  'la période de grâce dure exactement sept jours'
+);
+select is(
+  (select count(*) from public.notifications
+   where user_id = 'a0000000-0000-0000-0000-000000000002'
+     and type = 'subscription_reminder'
+     and payload ->> 'reminder_key' = 'due'),
+  1::bigint,
+  'le rappel J0 est envoyé une seule fois'
+);
+select tests.as_service();
+select is(
+  public.process_subscription_lifecycle(),
+  0,
+  'relancer le cycle ne duplique pas le rappel J0'
+);
+select tests.as_postgres();
+update public.subscriptions
+set status = 'past_due',
+    current_period_end = now() - interval '8 days',
+    grace_until = now() - interval '1 second'
+where shop_id = '50000000-0000-0000-0000-000000000001';
+select tests.as_service();
+select ok(
+  public.process_subscription_lifecycle() > 0,
+  'le cycle expire un abonnement après la période de grâce'
+);
+select tests.as_postgres();
+select is(
+  (select status::text from public.subscriptions
+   where shop_id = '50000000-0000-0000-0000-000000000001'),
+  'expired',
+  'l’abonnement passe à expired après sept jours de grâce'
+);
+select is(
+  (select count(*) from public.products
+   where shop_id = '50000000-0000-0000-0000-000000000001'
+     and not is_sample and deleted_at is null and not hidden_by_plan),
+  15::bigint,
+  'seuls les quinze produits les plus anciens restent visibles sous le plan Gratuit'
+);
+select ok(
+  (select count(*) > 0 from public.products
+   where shop_id = '50000000-0000-0000-0000-000000000001'
+     and hidden_by_plan and deleted_at is null),
+  'les produits au-delà du quota sont marqués sans être supprimés'
+);
+select is(
+  (select hidden_by_plan from public.products
+   where id = 'b0000000-0000-0000-0000-000000000001'),
+  false,
+  'les produits les plus anciens sont conservés en priorité'
+);
+select is(
+  (select status::text from public.orders
+   where id = '90000000-0000-0000-0000-000000000010'),
+  'pending_payment',
+  'la rétrogradation ne bloque pas une commande en cours'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000007');
+select ok(
+  coalesce(
+    (select not can_order and product_name = 'Article indisponible'
+     from public.get_cart_snapshot(
+       '50000000-0000-0000-0000-000000000001',
+       null
+     )
+     where product_id = tests.v('plan_hidden_product')::uuid),
+    false
+  ),
+  'un produit masqué devient indisponible dans un panier existant'
+);
+select ok(
+  coalesce(
+    (select errors[1] like 'product_unavailable:%'
+     from public.preview_order(
+       (select id from public.carts
+        where shop_id = '50000000-0000-0000-0000-000000000001'
+          and customer_id = 'a0000000-0000-0000-0000-000000000007'),
+       'ussd_orange',
+       'pickup',
+       null
+     )),
+    false
+  ),
+  'la vérification de commande refuse un produit masqué déjà au panier'
+);
+select throws_like(
+  $$select public.add_cart_item(
+    '50000000-0000-0000-0000-000000000001',
+    tests.v('plan_hidden_product')::uuid,
+    null, 1, null
+  )$$,
+  '%product_unavailable%',
+  'un produit masqué ne peut pas être ajouté à un panier'
+);
+select tests.as_postgres();
+select ok(
+  exists (
+    select 1 from public.audit_log
+    where shop_id = '50000000-0000-0000-0000-000000000001'
+      and action = 'subscription.past_due'
+  )
+  and exists (
+    select 1 from public.audit_log
+    where shop_id = '50000000-0000-0000-0000-000000000001'
+      and action = 'subscription.expired'
+  ),
+  'les transitions d’abonnement sont journalisées'
+);
+select tests.as_anon();
+select ok(
+  (select count(*) < 16 from public.products
+   where shop_id = '50000000-0000-0000-0000-000000000001'
+     and name like 'Plan overflow %'),
+  'les produits masqués par le plan restent invisibles publiquement'
+);
+select throws_ok(
+  $$select hidden_by_plan from public.products limit 1$$,
+  '42501', null, 'un visiteur ne peut pas lire le marqueur interne du plan'
+);
+select tests.as_postgres();
+update public.subscriptions
+set plan_id = (select id from public.plans where code = 'pro'),
+    status = 'active',
+    current_period_end = now() + interval '30 days',
+    grace_until = null
+where shop_id = '50000000-0000-0000-0000-000000000001';
+select is(
+  (select count(*) from public.products
+   where shop_id = '50000000-0000-0000-0000-000000000001'
+     and hidden_by_plan),
+  0::bigint,
+  'la réactivation restaure automatiquement les produits masqués'
+);
+select is(
+  (select count(*) from public.orders
+   where id = '90000000-0000-0000-0000-000000000010'),
+  1::bigint,
+  'aucune donnée de commande n’est perdue pendant le cycle de vie'
+);
+select ok(
+  exists (select 1 from cron.job
+          where jobname = 'process-subscription-lifecycle'),
+  'le cycle de vie est planifié toutes les cinq minutes'
+);
+select ok(
+  position(
+    'process-subscription-lifecycle'
+    in pg_get_functiondef('public.monitor_order_cron_jobs()'::regprocedure)
+  ) > 0,
+  'la surveillance cron inclut le cycle de vie des abonnements'
+);
+
+-- ---------- Rappels et annulation securisee des rendez-vous ----------
+select tests.as_postgres();
+select is(
+  (select count(*) from pg_publication_tables
+   where pubname = 'supabase_realtime'
+     and schemaname = 'public'
+     and tablename = 'bookings'),
+  1::bigint,
+  'les rendez-vous sont publies pour la mise a jour en temps reel'
+);
+select is(
+  public.process_booking_reminders(
+    (select lower(during) - interval '24 hours'
+     from public.bookings where id = tests.v('b2')::uuid)
+  ),
+  1,
+  'un rappel J-1 est cree pour le rendez-vous actif'
+);
+select is(
+  public.process_booking_reminders(
+    (select lower(during) - interval '24 hours'
+     from public.bookings where id = tests.v('b2')::uuid)
+  ),
+  0,
+  'le rappel J-1 ne se duplique pas apres relance'
+);
+select is(
+  public.process_booking_reminders(
+    (select lower(during) - interval '2 hours'
+     from public.bookings where id = tests.v('b2')::uuid)
+  ),
+  1,
+  'un rappel 2 h est cree pour le rendez-vous actif'
+);
+select is(
+  (select count(*) from public.notifications
+   where user_id = 'a0000000-0000-0000-0000-000000000007'
+     and type = 'booking_reminder'
+     and payload ->> 'booking_id' = tests.v('b2')),
+  2::bigint,
+  'les deux rappels sont envoyes au client concerne'
+);
+select is(
+  (select count(*) from public.notification_email_jobs j
+   join public.notifications n on n.id = j.notification_id
+   where n.user_id = 'a0000000-0000-0000-0000-000000000007'
+     and n.type = 'booking_reminder'
+     and n.payload ->> 'booking_id' = tests.v('b2')),
+  2::bigint,
+  'chaque rappel est ajoute a la file e-mail existante'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000006');
+select throws_ok(
+  format(
+    $$select public.issue_booking_cancel_token(%L, '24_hours')$$,
+    tests.v('b2')
+  ),
+  '42501', null, 'un client ne peut pas emettre un lien d''annulation'
+);
+select throws_ok(
+  format(
+    $$select public.redeem_booking_cancel_token(%L, '24_hours', now() + interval '1 day')$$,
+    tests.v('b2')
+  ),
+  '42501', null, 'un client ne peut pas annuler avec la RPC interne'
+);
+select tests.as_service();
+select ok(
+  (select public.issue_booking_cancel_token(tests.v('b2')::uuid, '24_hours') is not null),
+  'un lien est emis tant que le delai d''annulation est ouvert'
+);
+select tests.as_postgres();
+update public.shop_settings
+set booking_cancel_before_hours = 720
+where shop_id = '50000000-0000-0000-0000-000000000001';
+select tests.as_service();
+select throws_like(
+  format(
+    $$select public.redeem_booking_cancel_token(%L, '24_hours', %L::timestamptz)$$,
+    tests.v('b2'),
+    (select lower(during)::text from public.bookings where id = tests.v('b2')::uuid)
+  ),
+  '%cancellation_too_late%',
+  'le lien respecte le delai d''annulation configure par le commercant'
+);
+select tests.as_postgres();
+update public.shop_settings
+set booking_cancel_before_hours = 24
+where shop_id = '50000000-0000-0000-0000-000000000001';
+select tests.as_service();
+select lives_ok(
+  format(
+    $$select public.redeem_booking_cancel_token(%L, '24_hours', %L::timestamptz)$$,
+    tests.v('b2'),
+    (select lower(during)::text from public.bookings where id = tests.v('b2')::uuid)
+  ),
+  'le jeton confirme l''annulation avant le delai limite'
+);
+select throws_like(
+  format(
+    $$select public.redeem_booking_cancel_token(%L, '24_hours', %L::timestamptz)$$,
+    tests.v('b2'),
+    (select lower(during)::text from public.bookings where id = tests.v('b2')::uuid)
+  ),
+  '%booking_cancel_link_used%', 'le lien ne peut etre utilise qu''une seule fois'
+);
+select tests.as_postgres();
+select is(
+  (select status::text from public.bookings where id = tests.v('b2')::uuid),
+  'cancelled',
+  'l''annulation par lien est enregistree'
+);
+select is(
+  public.process_booking_reminders(
+    (select lower(during) - interval '1 hour'
+     from public.bookings where id = tests.v('b2')::uuid)
+  ),
+  0,
+  'aucun rappel ulterieur n''est cree apres annulation'
+);
+select ok(
+  exists (
+    select 1 from public.audit_log
+    where entity = 'bookings'
+      and entity_id = tests.v('b2')::uuid
+      and action = 'booking.cancelled_by_email_link'
+  ),
+  'l''annulation par lien est journalisee'
+);
+select tests.as_user('a0000000-0000-0000-0000-000000000005');
+select is(
+  (select count(*) from public.bookings
+   where shop_id = '50000000-0000-0000-0000-000000000001'),
+  0::bigint,
+  'un employe sans permission rendez-vous ne voit aucun rendez-vous'
+);
+
+select tests.as_postgres();
 select * from finish();
 rollback;

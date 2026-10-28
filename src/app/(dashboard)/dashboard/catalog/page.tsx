@@ -38,8 +38,8 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         <section className="catalog-card" role="alert">
           <h1>Accès refusé</h1>
           <p>
-            Tu n’as pas de boutique avec la permission « catalogue ». Demande
-            au propriétaire de t’accorder ce droit.
+            Tu n’as pas de boutique avec la permission « catalogue ». Demande au
+            propriétaire de t’accorder ce droit.
           </p>
         </section>
       </main>
@@ -126,7 +126,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const productsQuery = supabase
     .from("products")
     .select(
-      "id, shop_id, category_id, name, description, price, compare_at_price, sku, compatibility, stock, status, is_sample, deleted_at, created_at, updated_at",
+      "id, shop_id, category_id, name, description, price, compare_at_price, sku, compatibility, stock, status, is_sample, hidden_by_plan, deleted_at, created_at, updated_at",
     )
     .eq("shop_id", shop.id)
     .order("created_at", { ascending: false });

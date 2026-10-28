@@ -39,8 +39,68 @@ test("inscription confirmée, connexion et absence de jeton dans le stockage nav
   expect(authCookies.length).toBeGreaterThan(0);
   expect(authCookies.every((cookie) => cookie.httpOnly)).toBe(true);
 
+  await page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("boutiques-locales-private-v2", 1);
+      request.onupgradeneeded = () => {
+        request.result.createObjectStore("snapshots", { keyPath: "key" });
+        request.result.createObjectStore("keys", { keyPath: "key" });
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const transaction = database.transaction(
+      ["snapshots", "keys"],
+      "readwrite",
+    );
+    transaction.objectStore("snapshots").put({
+      key: "private-test:orders",
+      userId: "private-test",
+      kind: "orders",
+      ciphertext: new ArrayBuffer(8),
+    });
+    transaction.objectStore("keys").put({
+      key: "private-test",
+      cryptoKey: null,
+    });
+    await new Promise<void>((resolve, reject) => {
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+    database.close();
+    localStorage.setItem("boutiques-locales-private-user", "private-test");
+  });
+
   await page.getByRole("button", { name: "Se déconnecter" }).click();
   await expect(page).toHaveURL(/\/auth\/login$/, { timeout: 15_000 });
+  const privateDataCounts = await page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("boutiques-locales-private-v2", 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const transaction = database.transaction(["snapshots", "keys"], "readonly");
+    const counts = await Promise.all([
+      new Promise<number>((resolve, reject) => {
+        const request = transaction.objectStore("snapshots").count();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      }),
+      new Promise<number>((resolve, reject) => {
+        const request = transaction.objectStore("keys").count();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      }),
+    ]);
+    database.close();
+    return {
+      counts,
+      activeUser: localStorage.getItem("boutiques-locales-private-user"),
+    };
+  });
+  expect(privateDataCounts.counts).toEqual([0, 0]);
+  expect(privateDataCounts.activeUser).toBeNull();
 
   await page.getByLabel("Adresse e-mail").fill(email);
   await page.getByLabel("Mot de passe").fill(password);

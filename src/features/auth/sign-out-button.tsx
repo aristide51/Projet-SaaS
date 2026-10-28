@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { signOut } from "@/features/auth/actions";
+import { clearPrivateSnapshots } from "@/lib/pwa/private-data";
 
 export function SignOutButton() {
   const [pending, startTransition] = useTransition();
@@ -14,6 +15,15 @@ export function SignOutButton() {
 
       if (!result.success) {
         setError(result.message);
+        return;
+      }
+
+      try {
+        await clearPrivateSnapshots();
+      } catch {
+        setError(
+          "Tu es déconnecté, mais les données hors ligne n’ont pas pu être effacées. Efface les données du site depuis les réglages du navigateur.",
+        );
         return;
       }
 

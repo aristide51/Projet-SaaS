@@ -3,16 +3,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
+import { after } from "next/server";
 import { AddToCartButton } from "@/features/cart/storefront-cart";
 import {
   getPublicCatalog,
+  getPublicStorageUrl as getStorageUrl,
+  recordPublicStorefrontVisit,
   getPublicShop,
-  getPublicStorageUrl,
+  getReviewPhotoUrl,
+  getStorefrontReviews,
 } from "@/features/storefront/data";
+import { StorefrontReviews } from "@/features/reviews/storefront-reviews";
 import {
   getOpeningHoursList,
   getOpeningStatus,
 } from "@/features/storefront/opening-hours";
+import { absoluteSiteUrl } from "@/lib/site-url";
+import { logError } from "@/lib/monitoring/sentry";
+import { StorefrontShare } from "@/features/storefront/storefront-share";
 
 type PublicShopPageProps = {
   params: Promise<{ shop: string }>;
@@ -30,16 +38,22 @@ export async function generateMetadata({
   if (!shop) return { title: "Boutique introuvable" };
 
   const image = shop.logo_path
-    ? getPublicStorageUrl(shop.logo_path)
+    ? getStorageUrl(shop.logo_path)
     : undefined;
+  const canonical = absoluteSiteUrl(`/${encodeURIComponent(shop.slug)}`);
+  const location = [shop.district, shop.city].filter(Boolean).join(", ");
   return {
-    title: shop.name,
+    title: `${shop.name} — ${location}`,
     description:
       shop.description ??
       `Découvre les produits et services de ${shop.name} à ${shop.city}.`,
+    alternates: { canonical },
+    robots: { index: true, follow: true },
     openGraph: {
-      title: shop.name,
-      description: shop.description ?? `La vitrine de ${shop.name}.`,
+      title: `${shop.name} — ${location}`,
+      description:
+        shop.description ?? `Découvre ${shop.name}, à ${location}.`,
+      url: canonical,
       ...(image
         ? { images: [{ url: image, alt: `Logo de ${shop.name}` }] }
         : {}),
@@ -54,14 +68,26 @@ export default async function PublicShopPage({
   const [{ shop: slug }, search] = await Promise.all([params, searchParams]);
   const shop = await getPublicShop(slug);
   if (!shop) notFound();
+  after(() =>
+    recordPublicStorefrontVisit(shop.id).catch((error: unknown) =>
+      logError("storefront_visit_record_failed", error),
+    ),
+  );
 
   const query = firstQueryValue(search.q).slice(0, 100);
   const requestedCategory = firstQueryValue(search.categorie);
   const categoryId = UUID_PATTERN.test(requestedCategory)
     ? requestedCategory
     : null;
-  const catalog = await getPublicCatalog(shop.id, query, categoryId);
-  const logoUrl = shop.logo_path ? getPublicStorageUrl(shop.logo_path) : null;
+  const [catalog, reviewRows] = await Promise.all([
+    getPublicCatalog(shop.id, query, categoryId),
+    getStorefrontReviews(shop.id),
+  ]);
+  const reviews = reviewRows.map((review) => ({
+    ...review,
+    photoUrls: review.photo_paths.map(getReviewPhotoUrl),
+  }));
+  const logoUrl = shop.logo_path ? getStorageUrl(shop.logo_path) : null;
   const openingStatus = getOpeningStatus(shop.opening_hours);
   const openingHours = getOpeningHoursList(shop.opening_hours);
   const mapUrl =
@@ -72,6 +98,37 @@ export default async function PublicShopPage({
 
   return (
     <main className="public-shop-shell" style={theme}>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "LocalBusiness",
+            name: shop.name,
+            url: absoluteSiteUrl(`/${encodeURIComponent(shop.slug)}`),
+            ...(logoUrl ? { image: logoUrl } : {}),
+            ...(shop.phone ? { telephone: shop.phone } : {}),
+            address: {
+              "@type": "PostalAddress",
+              addressLocality: shop.city,
+              addressRegion: shop.district,
+              streetAddress: shop.address,
+              addressCountry: "BF",
+            },
+            ...(shop.rating_count > 0
+              ? {
+                  aggregateRating: {
+                    "@type": "AggregateRating",
+                    ratingValue: shop.rating_avg,
+                    reviewCount: shop.rating_count,
+                    bestRating: 5,
+                    worstRating: 1,
+                  },
+                }
+              : {}),
+          }).replace(/</g, "\\u003c"),
+        }}
+        type="application/ld+json"
+      />
       <header className="public-shop-header">
         {logoUrl ? (
           <Image
@@ -104,6 +161,12 @@ export default async function PublicShopPage({
       {shop.description ? (
         <p className="public-shop-description">{shop.description}</p>
       ) : null}
+
+      <StorefrontShare
+        shareUrl={absoluteSiteUrl(`/${encodeURIComponent(shop.slug)}`)}
+        shopName={shop.name}
+        shopSlug={shop.slug}
+      />
 
       <nav aria-label="Contacter la boutique" className="public-shop-actions">
         {shop.whatsapp ? (
@@ -200,7 +263,7 @@ export default async function PublicShopPage({
                         alt=""
                         fill
                         sizes="(max-width: 42rem) 100vw, (max-width: 70rem) 50vw, 25vw"
-                        src={getPublicStorageUrl(image.path)}
+                        src={getStorageUrl(image.path)}
                         unoptimized
                       />
                     ) : (
@@ -217,6 +280,11 @@ export default async function PublicShopPage({
                         : ""}
                     </small>
                     <h3>{item.name}</h3>
+                    {item.item_type === "product" &&
+                    item.compare_at_price !== null &&
+                    item.compare_at_price > item.price ? (
+                      <span className="public-promo-badge">Promo</span>
+                    ) : null}
                     {item.description ? <p>{item.description}</p> : null}
                     <strong>{formatPrice(item.price)}</strong>
                     {item.compare_at_price !== null ? (
@@ -246,8 +314,14 @@ export default async function PublicShopPage({
                       />
                     </div>
                   ) : (
-                    <article className="public-shop-product-card">
-                      {card}
+                    <article className="public-shop-product-entry">
+                      <div className="public-shop-product-card">{card}</div>
+                      <Link
+                        className="ui-button ui-button--secondary"
+                        href={`/${encodeURIComponent(shop.slug)}/bookings?service=${encodeURIComponent(item.id)}`}
+                      >
+                        Prendre rendez-vous
+                      </Link>
                     </article>
                   )}
                 </li>
@@ -267,6 +341,8 @@ export default async function PublicShopPage({
           </div>
         )}
       </section>
+
+      <StorefrontReviews reviews={reviews} />
 
       <section
         aria-labelledby="storefront-hours-title"

@@ -53,6 +53,7 @@ type Product = {
   status: "available" | "out_of_stock" | "hidden";
   deleted_at: string | null;
   is_sample: boolean;
+  hidden_by_plan: boolean;
   images: CatalogImage[];
   variants: Variant[];
 };
@@ -447,15 +448,20 @@ export function CatalogWorkspace({
                 </strong>
                 <p>
                   {remaining
-                    ? `Il te reste ${remaining} ajout${remaining > 1 ? "s" : ""} sur le plan Gratuit.`
-                    : "La limite du plan Gratuit est atteinte."}
+                    ? `Il te reste ${remaining} ajout${remaining > 1 ? "s" : ""} sur ton plan actuel.`
+                    : "La limite de ton plan actuel est atteinte."}
                 </p>
               </div>
               {remaining === 0 ? (
-                <p>
-                  Mets un produit à la corbeille ou passe à un plan supérieur
-                  pour en ajouter un.
-                </p>
+                <div>
+                  <p>Mets un produit à la corbeille ou consulte les plans.</p>
+                  <Link
+                    className="ui-button ui-button--secondary ui-button--sm"
+                    href={`/dashboard/abonnement?shop=${encodeURIComponent(shopId)}`}
+                  >
+                    Voir les plans
+                  </Link>
+                </div>
               ) : null}
             </section>
           ) : null}
@@ -944,11 +950,17 @@ export function CatalogWorkspace({
               </details>
             ) : (
               <div className="catalog-limit-message" role="status">
-                <strong>Limite du plan Gratuit atteinte.</strong>
+                <strong>Limite de produits atteinte.</strong>
                 <p>
                   Tu as déjà {productCount} produits. Mets-en un à la corbeille
-                  ou passe à un plan supérieur pour en ajouter.
+                  ou consulte les plans pour augmenter ta limite.
                 </p>
+                <Link
+                  className="ui-button ui-button--secondary"
+                  href="/dashboard/abonnement"
+                >
+                  Voir les plans
+                </Link>
               </div>
             )}
             {products.length ? (
@@ -977,6 +989,9 @@ export function CatalogWorkspace({
                           {product.name}{" "}
                           {product.is_sample ? (
                             <Badge tone="warning">Exemple</Badge>
+                          ) : null}
+                          {product.hidden_by_plan ? (
+                            <Badge tone="warning">Masqué par le plan</Badge>
                           ) : null}
                         </h3>
                         <p>

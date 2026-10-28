@@ -177,9 +177,19 @@ Mode agrégateur automatique, activé quand les conditions sont confirmées
 
 ### 4.6 Rendez-vous et réservations
 
-- Le commerçant définit : horaires d’ouverture par jour, pauses, jours fermés, durée par service, délai minimal de réservation, délai d’annulation, ressources ou employés (optionnel)
+- La configuration des rendez-vous (services, horaires, ressources, fermetures et réglages) est réservée au plan Pro ; la rétrogradation masque les fonctions sans supprimer les données
+
+- Le commerçant définit : horaires d’ouverture par jour et par ressource, plusieurs plages avec pauses, fermetures exceptionnelles par ressource ou pour toute la boutique, durée et prix de chaque service, acompte, délai minimal de réservation, délai d’annulation et confirmation automatique
+
+- Seuls le propriétaire et les employés autorisés par la permission « rendez-vous » peuvent gérer cette configuration ; les créneaux libres ne divulguent aucune réservation ni donnée client
+
+- Les créneaux peuvent être consultés jusqu’à 90 jours à l’avance et respectent le préavis configuré ; toutes les heures sont interprétées en `Africa/Ouagadougou` (UTC+0)
 
 - Le client voit uniquement les créneaux réellement libres, choisit un service, un créneau, et confirme
+
+- Depuis la vitrine, le client consulte les créneaux sur mobile et réserve en choisissant le service, la ressource et une note facultative ; en cas de conflit, des créneaux proches lui sont proposés
+
+- La page « Mes rendez-vous » liste les réservations du client et permet leur annulation uniquement via `set_booking_status`, dans le délai configuré par la boutique
 
 - Acompte optionnel par mobile money pour limiter les rendez-vous manqués
 
@@ -187,9 +197,10 @@ Mode agrégateur automatique, activé quand les conditions sont confirmées
 
 - Statuts : pending, confirmed, cancelled, completed, no_show
 
-- Rappels automatiques par e-mail (J-1 et 2 h avant), avec lien d’annulation ou de report
+- Rappels automatiques par notification et e-mail (J-1 et 2 h avant), avec lien signé à usage unique pour annuler après confirmation explicite ; l’annulation respecte le délai configuré et aucune réservation n’est annulée à la simple ouverture du lien
+- Les rappels sont dédupliqués par rendez-vous et échéance ; aucun rappel ne part après annulation. pg_cron surveille le traitement et alerte l’administration si aucune exécution réussie n’a eu lieu depuis 15 minutes.
 
-- Vue calendrier pour le commerçant (jour, semaine)
+- Vue calendrier commerçant jour/semaine, filtrée par ressource, mise à jour en temps réel ; les actions Confirmer, Annuler (motif obligatoire), Terminer et Absent passent par `set_booking_status`. Le nom et le téléphone client sont visibles uniquement aux membres ayant la permission `bookings`.
 
 - Fuseau : Africa/Ouagadougou (UTC+0, sans changement d’heure)
 
@@ -221,6 +232,16 @@ Pro + domaine personnalisé (V2), support prioritaire, équipe étendue
 
 - Reçus et historique de facturation téléchargeables en PDF
 
+- Espace Abonnement commerçant (3.1) : plan actif et échéance, consommation des produits et places d’équipe, invitations incluses ; limites, tarifs et fonctionnalités lus depuis `plans` et les RPC de quotas existantes. Les actions bloquées renvoient vers le quota et la comparaison des plans.
+
+- Facturation (3.2) : `generate_due_invoices()` crée une facture mensuelle ouverte dans les sept jours précédant l’échéance, due à la fin de période, pour les abonnements actifs payants. Une contrainte unique garantit une facture par boutique et période ; pg_cron relance le traitement chaque jour.
+
+- Cycle de vie (3.4) : `process_subscription_lifecycle()` fait passer un abonnement actif à `past_due` à l’échéance, accorde sept jours de grâce puis le passe à `expired`. Le plan Gratuit s’applique alors sans supprimer de donnée ; les produits les plus anciens restent visibles jusqu’au quota, les plus récents sont marqués `hidden_by_plan` et automatiquement restaurés après réactivation ou changement de plan. Les rappels J-7, J-3 et J0 sont envoyés une seule fois par échéance par notification et e-mail. Les commandes en cours restent indépendantes de cet état.
+
+- Paiement des abonnements (3.3) : bloqué jusqu’à l’ouverture du compte marchand de la plateforme ; aucun encaissement ou fournisseur réel ne doit être activé avant cette étape.
+
+- Historique et reçus (3.5) : l’espace Abonnement affiche toutes les factures de la boutique. Chaque facture reçoit un numéro global attribué dans la transaction ; une facture annulée reste conservée afin de ne pas créer de trou. L’Edge Function `subscription-invoice-pdf` produit une facture PDF pour les factures ouvertes/annulées et un reçu pour les factures payées, stockés dans le bucket privé `subscription-receipts`. La lecture est réservée au propriétaire de la boutique et à l’administration ; les liens de téléchargement sont temporaires. Le PDF est mis en page en portrait, avec les dates en `Africa/Ouagadougou` et les montants en FCFA. Les mentions légales et fiscales restent à confirmer avec le comptable ; chaque document l’indique clairement et ne prétend pas avoir une valeur fiscale définitive.
+
 - Tâches planifiées par Edge Functions ou pg_cron
 
 - Les limites de chaque plan sont appliquées côté base de données et côté serveur, jamais seulement dans l’interface
@@ -233,6 +254,8 @@ Pro + domaine personnalisé (V2), support prioritaire, équipe étendue
 
 - Calcul des remises uniquement côté serveur, jamais fait confiance au navigateur
 
+- La portée d’un code accepte une liste de produits, de catégories, ou les deux ; aperçu et création de commande utilisent le même calcul SQL.
+
 ### 4.9 Avis clients
 
 - Seuls les clients ayant une commande ou un rendez-vous terminé peuvent noter (avis vérifié), un avis par commande ou rendez-vous
@@ -242,6 +265,18 @@ Pro + domaine personnalisé (V2), support prioritaire, équipe étendue
 - Réponse publique du commerçant
 
 - Signalement et modération par l’admin
+
+- Invitation après une commande ou un rendez-vous terminé ; jusqu’à trois photos WebP de 3 Mo maximum sont ajoutées après création de l’avis et supprimées en cas d’échec du dépôt.
+
+- Les avis publics sont filtrés au niveau SQL pour les fiches produit ; les données structurées incluent AggregateRating quand des avis existent.
+
+### 5.3 Modération des avis
+
+- File du back-office séparant les avis signalés, les avis masqués et l’historique des décisions.
+
+- Les changements de visibilité passent par `moderate_review` ; chaque changement conserve l’administrateur, les statuts avant/après, le motif et la date. Un avis masqué est absent de la vitrine et des moyennes.
+
+- Limite de trois avis par client et par heure, appliquée en base. Les liens sont refusés ; un commentaire de moins de 20 caractères identique à un avis du même client publié dans les dernières 24 heures est refusé.
 
 - La note moyenne et le nombre d’avis sont maintenus par trigger pour un affichage rapide
 
@@ -253,6 +288,18 @@ Pro + domaine personnalisé (V2), support prioritaire, équipe étendue
 
 - Partage : liens courts de produit ou de boutique avec aperçu riche (image Open Graph) pour WhatsApp et réseaux sociaux
 
+- L’annuaire public utilise la RPC `search_shops`, une pagination par curseur et des index sur la visibilité, la localisation, la catégorie, le nom et les promotions. Il propose les tris pertinence, distance (depuis Ouagadougou ou Bobo-Dioulasso) et note ; ses tests incluent 10 000 boutiques, un `EXPLAIN ANALYZE` et une vérification du seuil de 100 ms.
+
+- Les suggestions de quartiers couvrent Ouagadougou et Bobo-Dioulasso. Les boutiques non approuvées ou suspendues ne sont ni recherchables, ni présentes dans le sitemap, ni indexables. Les pages de compte et de gestion sont en `noindex`.
+
+- Le sitemap liste les boutiques publiées et leurs produits publics ; `robots.txt` référence ce sitemap et écarte les parcours privés. Les pages boutique et produit ont des canoniques, titres localisés et images Open Graph générées. `NEXT_PUBLIC_SITE_URL` doit être configurée avec le domaine canonique en production.
+
+- Les liens produit courts encodent l’identifiant du produit sans exposer de donnée client et redirigent vers sa page publique canonique. Les aperçus WhatsApp incluent nom, prix et image. Les pages publiques proposent un partage WhatsApp prérempli ; la vitrine permet aussi de télécharger un QR code SVG.
+
+- Les visites de boutique et de produit sont agrégées par jour et par page, sans identifiant de visiteur, adresse IP ni agent utilisateur. Les compteurs ne sont pas directement lisibles par les rôles publics.
+
+- Lighthouse CI contrôle en mobile les pages boutique, produit et annuaire : Performance ≥ 0,90, LCP ≤ 2 500 ms, CLS ≤ 0,10, JavaScript transféré ≤ 200 000 octets et Total Blocking Time ≤ 200 ms comme garde-fou de laboratoire lié à l’INP. Voir `docs/performance.md`.
+
 ### 4.11 Tableau de bord commerçant
 
 - Vue d’ensemble : commandes du jour, rendez-vous du jour, chiffre d’affaires, produits les plus vus, avis récents
@@ -261,6 +308,9 @@ Pro + domaine personnalisé (V2), support prioritaire, équipe étendue
 
 - Commandes (étape 2.6) : liste filtrable par boutique, statut et dates ; export CSV des résultats filtrés ; vérification des déclarations USSD avec référence, numéro payeur et capture privée ; confirmation ou rejet motivé via `transition_order`, avec une seule correction autorisée ; marquage manuel des paiements à la livraison ou au retrait après confirmation ; progression payé → confirmée → prête → terminée avec historique visible ; annulation avec motif et remboursement confirmé par le commerçant (référence obligatoire pour l’USSD). Chaque transition est enregistrée par la RPC et notifie le client. Les nouvelles commandes et déclarations déclenchent une alerte Realtime dans le tableau de bord ; le son est optionnel et désactivé par défaut.
 - E-mails transactionnels (étape 2.7) : les notifications de réception de commande, paiement déclaré et changements de statut sont ajoutées à une file privée puis envoyées de façon asynchrone par l’Edge Function `notify` via Resend. Les échecs ne bloquent pas une transition métier ; les tâches échouées sont retentées jusqu’à cinq fois. La fonction limite les envois à 10 par utilisateur et par heure, en lots de 20. Un lien signé permet de désactiver les e-mails non essentiels pendant 90 jours ; les e-mails nécessaires au suivi d’une commande restent envoyés. Aucun numéro de téléphone ni référence de transaction ne figure dans ces e-mails.
+- Expiration et rappels (étape 2.8) : pg_cron appelle `expire_pending_orders()` et `remind_pending_declarations()` toutes les cinq minutes. Les commandes `payment_declared` ne sont jamais annulées par ces rappels ; une clé unique par commande et seuil empêche les doubles notifications commerçant (2 h, 24 h) et administrateur (72 h). Les statuts restent inchangés.
+- Agrégateur (étape 2.9, bloqué pour les vrais fournisseurs) : l’interface `PaymentProvider`, le faux fournisseur de test, la vérification de signature, l’idempotence des événements et le squelette de réconciliation sont présents. Aucun fournisseur réel ni formulaire de clés n’est activé ; l’écran reste bloqué par `PAYMENT_AGGREGATOR_ENABLED=false` et les clés ne sont pas collectées. Avant toute activation, obtenir les réponses écrites, valider la sandbox et fournir le chiffrement des clés ainsi que la réauthentification de leur gestion.
+- Limites de débit des Edge Functions (étape 2.10) : toutes les fonctions passent par un garde commun qui vérifie l’origine lorsqu’elle existe, applique une liste CORS explicite, plafonne le corps et limite les requêtes par IP pseudonymisée ; les fonctions utilisant un JWT appliquent aussi un quota par utilisateur. Les compteurs atomiques sont conservés dans un schéma privé et les erreurs de dépassement répondent 429 avec `Retry-After`. Les politiques prévues pour commande, déclaration de paiement, réservation, avis et connexion sont fournies ; ces parcours ne sont pas des Edge Functions dans la version actuelle et doivent être branchés à ce garde s’ils y sont déplacés. Les appels directs à Supabase Auth requièrent en plus ses limites natives.
 
 - Cloche de notifications pour commerçants et clients : compteur non lus en temps réel, liste paginée, lecture individuelle et isolation par utilisateur
 
@@ -278,15 +328,14 @@ Pro + domaine personnalisé (V2), support prioritaire, équipe étendue
 
 ### 4.13 Hors connexion partiel (PWA)
 
-- Application installable, service worker (Serwist ou équivalent compatible)
-
-- Disponible sans réseau : pages et catalogue déjà consultés, panier, commandes et rendez-vous déjà chargés, en lecture seule
-
-- Bannière claire quand l’utilisateur est hors ligne, actions d’écriture et de paiement désactivées avec explication
-
-- Mise à jour automatique du cache quand le réseau revient
-
-- Hors MVP : écriture hors ligne avec synchronisation différée
+- Application installable, manifeste limité au tableau de bord et service worker natif versionné ; les pages publiques anonymes peuvent être consultées hors ligne
+- Les POST, Server Actions, routes d’authentification, données personnalisées et justificatifs `payment-proofs` ne sont jamais mis en cache ; formulaires d’écriture bloqués hors connexion
+- Les pages privées ne sont jamais mises en cache par le service worker ; les commandes et rendez-vous déjà chargés peuvent être enregistrés chiffrés dans IndexedDB, isolés par utilisateur
+- La clé de chiffrement non extractible est conservée dans le stockage local du navigateur ; le chiffrement ne protège pas contre un script malveillant de même origine ou une personne utilisant une session encore ouverte
+- À la déconnexion, les données et clés IndexedDB sont supprimées ; un changement de compte efface d’abord les données du compte précédent
+- Une bannière explique les limites hors connexion ; les formulaires qui écrivent sont bloqués avec un message
+- Au retour du réseau, les pages privées sont rechargées depuis le serveur ; aucune écriture ni synchronisation différée hors ligne
+- Hors périmètre : conservation locale du panier, justificatifs de paiement, secrets d’authentification et données d’autres utilisateurs
 
 ### 4.14 Mise en route du commerçant
 

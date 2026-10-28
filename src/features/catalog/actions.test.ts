@@ -50,6 +50,10 @@ function configureAccess(
     data: string | null;
     error: { message: string; code: string } | null;
   } = { data: productId, error: null },
+  productLimitResult: {
+    data: number | null;
+    error: { message: string; code: string } | null;
+  } = { data: 15, error: null },
 ) {
   const membershipQuery = {
     select: vi.fn().mockReturnThis(),
@@ -65,7 +69,11 @@ function configureAccess(
     from: vi.fn((table: string) =>
       table === "shop_members" ? membershipQuery : variantsQuery,
     ),
-    rpc: vi.fn().mockResolvedValue(rpcResult),
+    rpc: vi.fn((name: string) =>
+      Promise.resolve(
+        name === "catalog_product_limit" ? productLimitResult : rpcResult,
+      ),
+    ),
   };
   getUser.mockResolvedValue({
     id: "30000000-0000-4000-8000-000000000001",
@@ -132,14 +140,18 @@ describe("catalog server actions", () => {
   });
 
   it("returns the plan-limit message from the database constraint", async () => {
-    configureAccess(
+    const supabase = configureAccess(
       { role: "owner", permissions: {} },
       { data: null, error: { message: "plan_limit_products", code: "P0001" } },
+      { data: 40, error: null },
     );
 
     await expect(saveProduct(shopId, validProduct)).resolves.toMatchObject({
       success: false,
-      message: expect.stringContaining("15 produits"),
+      message: expect.stringContaining("40 produits"),
+    });
+    expect(supabase.rpc).toHaveBeenCalledWith("catalog_product_limit", {
+      p_shop: shopId,
     });
   });
 });
