@@ -9461,3 +9461,82 @@ textarea:focus-visible,
     transform: scaleY(1) !important;
   }
 }
+
+.merchant-stat-motion,
+.merchant-tool-motion {
+  height: 100%;
+  min-width: 0;
+}
+
+.merchant-stat-motion > .merchant-stat,
+.merchant-tool-motion > .merchant-tool {
+  height: 100%;
+}
+
+.merchant-stat {
+  transition:
+    border-color var(--duration-normal) var(--ease-standard),
+    box-shadow var(--duration-normal) var(--ease-standard);
+}
+
+.merchant-stat-motion:hover > .merchant-stat,
+.merchant-stat-motion:focus-within > .merchant-stat {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-floating);
+}
+
+.merchant-tool-motion:hover > .merchant-tool,
+.merchant-tool-motion:focus-within > .merchant-tool {
+  transform: none;
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-floating);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .merchant-stat,
+  .merchant-tool {
+    transition: none;
+  }
+}
+
+@media (min-width: 961px) {
+  .marketing-hero {
+    min-height: min(41rem, calc(100svh - 6.75rem));
+    grid-template-columns: minmax(0, 1.05fr) minmax(25rem, 0.95fr);
+    gap: clamp(1.5rem, 4vw, 3.5rem);
+    padding-block: clamp(3rem, 6vw, 5rem);
+  }
+
+  .marketing-hero h1 {
+    max-width: 100%;
+    font-size: clamp(2.75rem, 4vw, 4rem);
+    text-wrap: balance;
+  }
+
+  .marketing-hero__visual {
+    min-height: clamp(24rem, 30vw, 28rem);
+  }
+}
+
+@media (min-width: 761px) and (max-width: 960px) {
+  .marketing-hero {
+    min-height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    padding: 4rem 1.5rem 2.5rem;
+  }
+
+  .marketing-hero__copy {
+    max-width: 44rem;
+  }
+
+  .marketing-hero h1 {
+    font-size: clamp(2.75rem, 5vw, 3.8rem);
+    text-wrap: balance;
+  }
+
+  .marketing-hero__visual {
+    width: 100%;
+    min-height: clamp(23rem, 58vw, 31rem);
+  }
+}

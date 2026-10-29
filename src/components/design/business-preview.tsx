@@ -57,7 +57,7 @@ export function BusinessPreview() {
             key={type.label}
             onClick={() => setActiveIndex(index)}
             type="button"
-            whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
+            {...(prefersReducedMotion ? {} : { whileTap: { scale: 0.96 } })}
             transition={{ duration: prefersReducedMotion ? 0 : 0.16 }}
           >
             {type.label}
