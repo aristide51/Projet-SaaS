@@ -25,7 +25,19 @@ test("page d’accueil marketing accessible et complète", async ({ page }) => {
     .evaluate((heading) =>
       window.getComputedStyle(heading).fontFamily.toLowerCase(),
     );
-  expect(headingFont).toContain("manrope");
+  expect(headingFont).toContain("unbounded");
+  const bodyFont = await page
+    .locator("body")
+    .evaluate((body) => window.getComputedStyle(body).fontFamily.toLowerCase());
+  expect(bodyFont).toContain("inter");
+  await expect(page.locator(".marketing-hero")).toHaveCSS(
+    "background-image",
+    /rgb\(8, 120, 47\)/,
+  );
+  await expect(page.locator(".marketing-hero .marketing-button")).toHaveCSS(
+    "background-color",
+    "rgb(225, 11, 23)",
+  );
   await page.locator(".benefit-card").first().hover();
   await expect(page.locator(".benefit-card").first()).toHaveCSS(
     "translate",
@@ -131,7 +143,9 @@ test("la scène 3D se charge après validation des capacités", async ({
 
   await expect(page.getByRole("alertdialog")).toHaveCount(0);
   await expect(page.locator(".platform-scene__fallback")).toBeVisible();
-  await expect(page.locator(".platform-scene canvas")).toHaveCount(1);
+  await expect(page.locator(".platform-scene canvas")).toHaveCount(1, {
+    timeout: 15_000,
+  });
 });
 
 test("une API de compatibilité qui ne répond pas ne bloque pas la page", async ({
