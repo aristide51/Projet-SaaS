@@ -11079,3 +11079,215 @@ textarea:focus-visible,
     transform: none;
   }
 }
+
+.pricing-offer-grid {
+  display: grid;
+  width: min(100%, 72rem);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: stretch;
+  margin: 2.5rem auto 0;
+}
+
+.pricing-offer-card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-width: 0;
+  min-height: 29rem;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 1.75rem;
+  border-radius: 1.1rem;
+  background-color: #4f46e5;
+  color: #fff;
+  box-shadow: 0 1rem 2.5rem rgb(20 25 45 / 14%);
+  transform-origin: center;
+  transition: box-shadow 240ms ease;
+}
+
+.pricing-offer-card::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: linear-gradient(155deg, transparent 28%, rgb(20 14 45 / 18%));
+  content: "";
+  pointer-events: none;
+}
+
+.pricing-offer-card__art {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pricing-offer-card__body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.pricing-offer-card__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.pricing-offer-card__name,
+.pricing-offer-card__featured {
+  width: fit-content;
+  margin: 0;
+  padding: 0.34rem 0.78rem;
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 16%);
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.35;
+  backdrop-filter: blur(8px);
+}
+
+.pricing-offer-card__featured {
+  background: rgb(0 0 0 / 22%);
+  font-size: 0.65rem;
+}
+
+.pricing-offer-card__price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.65rem;
+  margin: 1.2rem 0 0;
+}
+
+.pricing-offer-card__amount {
+  color: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: clamp(2.35rem, 4.2vw, 3.4rem);
+  font-weight: 900;
+  letter-spacing: -0.075em;
+  line-height: 1.12;
+  white-space: nowrap;
+}
+
+.pricing-offer-card__unit {
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.pricing-offer-card__unit span {
+  color: rgb(255 255 255 / 88%);
+  font-weight: 600;
+}
+
+.pricing-offer-card__description {
+  max-width: 30rem;
+  margin: 0.8rem 0 0;
+  color: rgb(255 255 255 / 94%);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.pricing-offer-card__benefits {
+  display: grid;
+  gap: 0.62rem;
+  margin: 1.1rem 0 0;
+  padding: 0;
+  color: #fff;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  list-style: none;
+}
+
+.pricing-offer-card__benefits li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.pricing-offer-card__benefits li span {
+  flex: none;
+  color: #fff;
+  font-weight: 900;
+}
+
+.pricing-offer-card__cta {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+  padding: 0.78rem 1rem;
+  border: 2px solid #fff;
+  border-radius: 0.7rem;
+  background: #fff;
+  color: #20202a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.035em;
+  line-height: 1.35;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease;
+}
+
+.pricing-offer-card__cta:hover {
+  border-color: rgb(255 255 255 / 82%);
+  background: rgb(255 255 255 / 10%);
+  color: #fff;
+}
+
+.pricing-offer-card__cta:focus-visible {
+  outline: 3px solid #1f2937;
+  outline-offset: 3px;
+}
+
+.pricing-offer-card:focus-within {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+
+@media (max-width: 920px) {
+  .pricing-offer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .pricing-offer-grid {
+    width: min(100%, 26rem);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .pricing-offer-card {
+    min-height: 27rem;
+    padding: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pricing-offer-card,
+  .pricing-offer-card__cta {
+    transition: none;
+  }
+}

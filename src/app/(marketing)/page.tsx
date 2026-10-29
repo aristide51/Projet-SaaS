@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { MarketingHeroCarousel } from "@/components/design/marketing-hero-carousel";
 import { MarketingMotion } from "@/components/design/marketing-motion";
+import { PricingOfferCards } from "@/components/design/pricing-offer-cards";
 import { MotionSurface } from "@/components/design/motion-surface";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseConfig } from "@/lib/env";
@@ -285,69 +286,41 @@ export default async function HomePage() {
               <Link href="/auth/signup">Commencer maintenant</Link>
             </p>
           ) : (
-            <div className="plan-grid" data-stagger>
-              {(plans ?? []).map((plan) => {
+            <PricingOfferCards
+              offers={(plans ?? []).map((plan) => {
                 const isPro = plan.code === "pro";
                 const productLimit = getPlanProductLimit(plan.limits);
                 const features = getPlanFeatures(plan.features);
-                const benefitLabels = [
-                  typeof productLimit === "number"
-                    ? `Jusqu’à ${productLimit} produits`
-                    : productLimit === null
-                      ? "Produits illimités"
-                      : "Catalogue de produits",
-                  "Commandes en ligne",
-                  "Partage de votre boutique",
-                  ...features,
-                ];
 
-                return (
-                  <article
-                    className={`plan-card${isPro ? "plan-card--featured" : ""}`}
-                    key={plan.code}
-                  >
-                    {isPro && <p className="plan-card__tag">Pour grandir</p>}
-                    <p className="plan-card__name">{plan.name}</p>
-                    <p className="plan-card__price">
-                      <strong>
-                        {plan.price_monthly === 0
-                          ? "Gratuit"
-                          : money.format(plan.price_monthly)}
-                      </strong>
-                      {plan.price_monthly > 0 && <span>FCFA / mois</span>}
-                    </p>
-                    <p className="plan-card__description">
-                      {plan.code === "free"
-                        ? "Pour lancer votre première vitrine."
-                        : plan.code === "pro"
-                          ? "Pour développer vos ventes et vos services."
-                          : "Pour structurer votre activité."}
-                    </p>
-                    <ul>
-                      {benefitLabels.map((label) => (
-                        <li key={label}>
-                          <span aria-hidden="true">✓</span>
-                          {label}
-                        </li>
-                      ))}
-                    </ul>
-                    <Link
-                      className={
-                        isPro
-                          ? "marketing-button"
-                          : "marketing-button marketing-button--outline"
-                      }
-                      href="/auth/signup"
-                    >
-                      {plan.price_monthly === 0
-                        ? "Créer ma boutique"
-                        : "Choisir cette offre"}
-                      <span aria-hidden="true">→</span>
-                    </Link>
-                  </article>
-                );
+                return {
+                  code: plan.code,
+                  name: plan.name,
+                  formattedPrice: money.format(plan.price_monthly),
+                  isFree: plan.price_monthly === 0,
+                  description:
+                    plan.code === "free"
+                      ? "Pour lancer votre première vitrine."
+                      : isPro
+                        ? "Pour développer vos ventes et vos services."
+                        : "Pour structurer votre activité.",
+                  benefits: [
+                    typeof productLimit === "number"
+                      ? `Jusqu’à ${productLimit} produits`
+                      : productLimit === null
+                        ? "Produits illimités"
+                        : "Catalogue de produits",
+                    "Commandes en ligne",
+                    "Partage de votre boutique",
+                    ...features,
+                  ],
+                  cta:
+                    plan.price_monthly === 0
+                      ? "Créer ma boutique"
+                      : "Choisir cette offre",
+                  featured: isPro,
+                };
               })}
-            </div>
+            />
           )}
           {isSupabaseConfigured && !error && (
             <p className="plan-note">
