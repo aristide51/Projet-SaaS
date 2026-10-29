@@ -53,10 +53,41 @@ export async function updateSession(
   );
 
   const { error } = await supabase.auth.getClaims();
+  let hasInvalidRefreshToken = false;
 
   if (error) {
-    throw new Error("Impossible de vérifier la session Supabase.", {
-      cause: error,
+    if (!isInvalidRefreshTokenError(error)) {
+      throw new Error("Impossible de vérifier la session Supabase.", {
+        cause: error,
+      });
+    }
+
+    hasInvalidRefreshToken = true;
+    const invalidCookieNames = request.cookies
+      .getAll()
+      .map(({ name }) => name)
+      .filter((name) => /^sb-.+-auth-token(?:\.\d+)?$/.test(name));
+
+    invalidCookieNames.forEach((name) => request.cookies.delete(name));
+    requestHeaders.set("cookie", request.cookies.toString());
+
+    const responseWithAnonymousRequest = NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+    response.cookies.getAll().forEach((cookie) => {
+      responseWithAnonymousRequest.cookies.set(cookie);
+    });
+    response = responseWithAnonymousRequest;
+
+    invalidCookieNames.forEach((name) => {
+      response.cookies.set(name, "", {
+        expires: new Date(0),
+        httpOnly: true,
+        maxAge: 0,
+        path: "/",
+        sameSite: "lax",
+        secure,
+      });
     });
   }
 
@@ -69,7 +100,9 @@ export async function updateSession(
   const {
     data: { user },
     error: userError,
-  } = await supabase.auth.getUser();
+  } = hasInvalidRefreshToken
+    ? { data: { user: null }, error: null }
+    : await supabase.auth.getUser();
 
   if (userError && userError.name !== "AuthSessionMissingError") {
     throw new Error("Impossible de vérifier la session protégée.", {
@@ -111,6 +144,14 @@ export async function updateSession(
   }
 
   return response;
+}
+
+function isInvalidRefreshTokenError(error: { code?: string | undefined }) {
+  return (
+    error.code === "refresh_token_not_found" ||
+    error.code === "refresh_token_already_used" ||
+    error.code === "session_expired"
+  );
 }
 
 function redirectWithCookies(
