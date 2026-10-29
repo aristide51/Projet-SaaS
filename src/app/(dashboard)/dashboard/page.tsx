@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MotionSurface } from "@/components/design/motion-surface";
 import { requireVerifiedUser } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { MarketingMotion } from "@/components/design/marketing-motion";
@@ -188,46 +189,66 @@ export default async function DashboardPage() {
           <section
             aria-label="Activité à suivre"
             className="merchant-home__stats"
-            data-stagger
           >
-            <article className="merchant-stat">
-              <span aria-hidden="true" className="merchant-stat__icon">
-                ↗
-              </span>
-              <p className="merchant-stat__value">
-                {pendingOrdersResult.count ?? 0}
-              </p>
-              <h2>Commandes à traiter</h2>
-              <Link href="/dashboard/orders">
-                Ouvrir les commandes <span aria-hidden="true">→</span>
-              </Link>
-            </article>
-            <article className="merchant-stat">
-              <span aria-hidden="true" className="merchant-stat__icon">
-                ◷
-              </span>
-              <p className="merchant-stat__value">
-                {pendingBookingsResult.count ?? 0}
-              </p>
-              <h2>Demandes de rendez-vous</h2>
-              <Link href="/dashboard/bookings">
-                Ouvrir l’agenda <span aria-hidden="true">→</span>
-              </Link>
-            </article>
-            <article className="merchant-stat merchant-stat--shop">
-              <span aria-hidden="true" className="merchant-stat__icon">
-                ▦
-              </span>
-              <p className="merchant-stat__value">{shops.length}</p>
-              <h2>{shops.length > 1 ? "Boutiques" : "Ma boutique"}</h2>
-              <Link
-                href={`/${encodeURIComponent(primaryShop.slug)}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Voir la vitrine <span aria-hidden="true">↗</span>
-              </Link>
-            </article>
+            <MotionSurface
+              className="merchant-stat-motion"
+              hoverScale={1.006}
+              lift={3}
+              pressScale={0.995}
+            >
+              <article className="merchant-stat" data-reveal>
+                <span aria-hidden="true" className="merchant-stat__icon">
+                  ↗
+                </span>
+                <p className="merchant-stat__value">
+                  {pendingOrdersResult.count ?? 0}
+                </p>
+                <h2>Commandes à traiter</h2>
+                <Link href="/dashboard/orders">
+                  Ouvrir les commandes <span aria-hidden="true">→</span>
+                </Link>
+              </article>
+            </MotionSurface>
+            <MotionSurface
+              className="merchant-stat-motion"
+              hoverScale={1.006}
+              lift={3}
+              pressScale={0.995}
+            >
+              <article className="merchant-stat" data-reveal>
+                <span aria-hidden="true" className="merchant-stat__icon">
+                  ◷
+                </span>
+                <p className="merchant-stat__value">
+                  {pendingBookingsResult.count ?? 0}
+                </p>
+                <h2>Demandes de rendez-vous</h2>
+                <Link href="/dashboard/bookings">
+                  Ouvrir l’agenda <span aria-hidden="true">→</span>
+                </Link>
+              </article>
+            </MotionSurface>
+            <MotionSurface
+              className="merchant-stat-motion"
+              hoverScale={1.006}
+              lift={3}
+              pressScale={0.995}
+            >
+              <article className="merchant-stat merchant-stat--shop" data-reveal>
+                <span aria-hidden="true" className="merchant-stat__icon">
+                  ▦
+                </span>
+                <p className="merchant-stat__value">{shops.length}</p>
+                <h2>{shops.length > 1 ? "Boutiques" : "Ma boutique"}</h2>
+                <Link
+                  href={`/${encodeURIComponent(primaryShop.slug)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Voir la vitrine <span aria-hidden="true">↗</span>
+                </Link>
+              </article>
+            </MotionSurface>
           </section>
         ) : (
           <section className="merchant-home__empty" data-reveal>
@@ -263,24 +284,32 @@ export default async function DashboardPage() {
             </p>
           </div>
           {shortcuts.length ? (
-            <div className="merchant-tools-grid" data-stagger>
+            <div className="merchant-tools-grid">
               {shortcuts.map((shortcut) => (
-                <Link
-                  className="merchant-tool"
-                  href={shortcut.href}
+                <MotionSurface
+                  className="merchant-tool-motion"
+                  hoverScale={1.006}
                   key={shortcut.label}
+                  lift={3}
+                  pressScale={0.995}
                 >
-                  <span aria-hidden="true" className="merchant-tool__icon">
-                    {shortcut.icon}
-                  </span>
-                  <span className="merchant-tool__body">
-                    <strong>{shortcut.label}</strong>
-                    <span>{shortcut.description}</span>
-                  </span>
-                  <span aria-hidden="true" className="merchant-tool__arrow">
-                    ↗
-                  </span>
-                </Link>
+                  <Link
+                    className="merchant-tool"
+                    data-reveal
+                    href={shortcut.href}
+                  >
+                    <span aria-hidden="true" className="merchant-tool__icon">
+                      {shortcut.icon}
+                    </span>
+                    <span className="merchant-tool__body">
+                      <strong>{shortcut.label}</strong>
+                      <span>{shortcut.description}</span>
+                    </span>
+                    <span aria-hidden="true" className="merchant-tool__arrow">
+                      ↗
+                    </span>
+                  </Link>
+                </MotionSurface>
               ))}
             </div>
           ) : (
