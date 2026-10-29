@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { domAnimation, LazyMotion } from "framer-motion";
 
 export function MarketingMotion({
   children,
@@ -27,6 +28,31 @@ export function MarketingMotion({
       scrollTrigger = scrollTriggerModule.ScrollTrigger;
       gsap.registerPlugin(scrollTrigger);
       context = gsap.context(() => {
+        const heroIntro = root.querySelector<HTMLElement>("[data-hero-intro]");
+        const heroArt = root.querySelector<HTMLElement>("[data-hero-art]");
+        const heroTimeline = gsap.timeline({
+          defaults: { ease: "power3.out" },
+        });
+
+        if (heroIntro) {
+          heroTimeline.fromTo(
+            heroIntro.querySelectorAll(
+              ".marketing-kicker, h1, .marketing-hero__intro, .marketing-hero__actions, .marketing-proof",
+            ),
+            { autoAlpha: 0, y: 22 },
+            { autoAlpha: 1, y: 0, duration: 0.7, stagger: 0.1 },
+          );
+        }
+
+        if (heroArt) {
+          heroTimeline.fromTo(
+            heroArt,
+            { autoAlpha: 0, y: 28, scale: 0.97 },
+            { autoAlpha: 1, y: 0, scale: 1, duration: 0.85 },
+            heroIntro ? "-=0.55" : 0,
+          );
+        }
+
         root
           .querySelectorAll<HTMLElement>("[data-reveal]")
           .forEach((element) => {
@@ -49,15 +75,25 @@ export function MarketingMotion({
         root
           .querySelectorAll<HTMLElement>("[data-stagger]")
           .forEach((element) => {
+            const isBenefitGrid = element.dataset.stagger === "benefits";
+            const targets = isBenefitGrid
+              ? element.querySelectorAll<HTMLElement>(".benefit-card")
+              : element.children;
             gsap.fromTo(
-              element.children,
-              { autoAlpha: 0, y: 20, scale: 0.97 },
+              targets,
+              {
+                autoAlpha: 0,
+                y: isBenefitGrid ? 34 : 20,
+                scale: isBenefitGrid ? 0.94 : 0.97,
+                rotationX: isBenefitGrid ? 7 : 0,
+              },
               {
                 autoAlpha: 1,
                 y: 0,
                 scale: 1,
-                duration: 0.5,
-                stagger: 0.1,
+                rotationX: 0,
+                duration: isBenefitGrid ? 0.65 : 0.5,
+                stagger: isBenefitGrid ? 0.14 : 0.1,
                 ease: "power3.out",
                 scrollTrigger: {
                   trigger: element,
@@ -103,8 +139,10 @@ export function MarketingMotion({
   }, []);
 
   return (
-    <div className="marketing-motion" ref={rootRef}>
-      {children}
-    </div>
+    <LazyMotion features={domAnimation} strict>
+      <div className="marketing-motion" ref={rootRef}>
+        {children}
+      </div>
+    </LazyMotion>
   );
 }

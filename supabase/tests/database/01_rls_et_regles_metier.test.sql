@@ -107,6 +107,31 @@ insert into ctx values ('mon9', (date_trunc('week', now() + interval '14 days') 
 -- =====================================================================
 select tests.as_anon();
 select is((select count(*) from public.shops), 2::bigint, 'anon : seules les boutiques approuvees sont visibles');
+select is(
+  (select slug from public.shops where id = '50000000-0000-0000-0000-000000000001'),
+  'quincaillerie-test',
+  'anon : les colonnes publiques de la boutique restent lisibles'
+);
+select throws_ok(
+  $$select created_by from public.shops where id = '50000000-0000-0000-0000-000000000001'$$,
+  '42501', null, 'anon : l’identifiant du propriétaire est masqué'
+);
+select throws_ok(
+  $$select reviewed_by from public.shops where id = '50000000-0000-0000-0000-000000000001'$$,
+  '42501', null, 'anon : l’identifiant du modérateur est masqué'
+);
+select throws_ok(
+  $$select rejection_reason from public.shops where id = '50000000-0000-0000-0000-000000000001'$$,
+  '42501', null, 'anon : le motif de modération est masqué'
+);
+select throws_ok(
+  $$select review_status from public.shops where id = '50000000-0000-0000-0000-000000000001'$$,
+  '42501', null, 'anon : le statut interne de publication est masqué'
+);
+select throws_ok(
+  $$select is_suspended from public.shops where id = '50000000-0000-0000-0000-000000000001'$$,
+  '42501', null, 'anon : le statut interne de suspension est masqué'
+);
 select throws_ok(
   $$select * from public.preview_order(
     '00000000-0000-0000-0000-000000000000',

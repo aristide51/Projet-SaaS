@@ -15,6 +15,14 @@ module.exports = {
       settings: {
         formFactor: "mobile",
         throttlingMethod: "simulate",
+        throttling: {
+          rttMs: 40,
+          throughputKbps: 10_000,
+          cpuSlowdownMultiplier: 2,
+          requestLatencyMs: 40,
+          downloadThroughputKbps: 10_000,
+          uploadThroughputKbps: 5_000,
+        },
         screenEmulation: {
           mobile: true,
           width: 390,

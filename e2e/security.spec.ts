@@ -36,11 +36,17 @@ test("la route de santé répond sans mise en cache avec les en-têtes de sécur
   const contentSecurityPolicy =
     response.headers()["content-security-policy"] ?? "";
   expect(contentSecurityPolicy).toContain("nonce-");
-  expect(contentSecurityPolicy).not.toContain("'unsafe-inline'");
   const scriptDirective = contentSecurityPolicy
     .split(";")
     .find((directive) => directive.trimStart().startsWith("script-src"));
   expect(scriptDirective).toBeDefined();
+  expect(scriptDirective).not.toContain("'unsafe-inline'");
+  const styleElementDirective = contentSecurityPolicy
+    .split(";")
+    .find((directive) => directive.trimStart().startsWith("style-src "));
+  expect(styleElementDirective).toBeDefined();
+  expect(styleElementDirective).not.toContain("'unsafe-inline'");
+  expect(contentSecurityPolicy).toContain("style-src-attr 'unsafe-inline'");
 });
 
 test("une requête d’écriture avec une origine étrangère est refusée", async ({

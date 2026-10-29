@@ -9,7 +9,7 @@ Le workflow `Lighthouse CI` mesure en émulation mobile les parcours :
 - produit : `/lhci-boutique/products/b0000000-0000-4000-8000-000000000001`
 - annuaire : `/shops?ville=Ouagadougou`
 
-Il démarre une base Supabase locale, applique toutes les migrations, ajoute des données de démonstration isolées, construit l’application de production puis exécute trois mesures Lighthouse par URL. Les rapports sont conservés comme artefacts du workflow. Une assertion en erreur fait échouer le contrôle CI.
+Il démarre une base Supabase locale, applique toutes les migrations, ajoute des données de démonstration isolées, construit l’application de production puis exécute trois mesures Lighthouse par URL. Le profil de laboratoire simule un débit descendant de 10 Mbit/s, une latence de 40 ms et un ralentissement CPU de 2×, avec un viewport mobile de 390 × 844 px. Il représente la cible d’équipement définie dans le cahier des charges, pas une mesure réseau réelle. Les rapports sont conservés comme artefacts du workflow. Une assertion en erreur fait échouer le contrôle CI.
 
 | Mesure                                                     |        Budget CI |
 | ---------------------------------------------------------- | ---------------: |

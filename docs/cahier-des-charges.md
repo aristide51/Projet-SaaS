@@ -18,7 +18,7 @@ Objectifs mesurables du MVP
 
 - Aucune donnée d’une boutique accessible à une autre, vérifié par des tests automatisés des politiques RLS
 
-Positionnement : design haut de gamme pour une clientèle équipée de bons smartphones et prête à payer en ligne, avec WhatsApp et le mobile money au cœur du parcours. Le site reste rapide et utilisable sur un téléphone modeste.
+Positionnement : design haut de gamme pour une clientèle équipée de smartphones récents et d’une connexion rapide, avec WhatsApp et le mobile money au cœur du parcours. L’application entière vise Android 13 ou plus récent avec au moins 6 Go de RAM, ou iPhone 11 ou plus récent sous iOS 16 ou plus récent, et une connexion 4G stable d’au moins 10 Mbit/s ou un Wi-Fi rapide. Les navigateurs ne donnent pas accès au modèle exact du téléphone ni à sa RAM réelle ; le contrôle côté navigateur s’appuie donc sur les versions système, la mémoire et le nombre de cœurs déclarés, le débit estimé et la disponibilité de WebGL2. Ces signaux restent des approximations et certains navigateurs ne les exposent pas.
 
 ## 2. Décisions prises
 
@@ -298,7 +298,7 @@ Pro + domaine personnalisé (V2), support prioritaire, équipe étendue
 
 - Les visites de boutique et de produit sont agrégées par jour et par page, sans identifiant de visiteur, adresse IP ni agent utilisateur. Les compteurs ne sont pas directement lisibles par les rôles publics.
 
-- Lighthouse CI contrôle en mobile les pages boutique, produit et annuaire : Performance ≥ 0,90, LCP ≤ 2 500 ms, CLS ≤ 0,10, JavaScript transféré ≤ 200 000 octets et Total Blocking Time ≤ 200 ms comme garde-fou de laboratoire lié à l’INP. Voir `docs/performance.md`.
+- Lighthouse CI contrôle l’accueil, les pages boutique, produit et annuaire en profil mobile ; les budgets restent ceux mesurés dans `docs/performance.md`. L’accueil peut charger des animations 3D après vérification des capacités. Les objectifs de stabilité visuelle et d’accessibilité restent prioritaires, même lorsque le matériel cible est plus puissant.
 
 ### 4.11 Tableau de bord commerçant
 

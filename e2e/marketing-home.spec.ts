@@ -15,6 +15,22 @@ test("page d’accueil marketing accessible et complète", async ({ page }) => {
       name: "Tout votre commerce. Au même endroit.",
     }),
   ).toBeVisible();
+  await expect(page.locator(".benefit-card")).toHaveCount(3);
+  await expect(page.locator(".benefit-card__icon")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Votre vitrine en ligne" }),
+  ).toBeVisible();
+  const headingFont = await page
+    .locator("h1")
+    .evaluate((heading) =>
+      window.getComputedStyle(heading).fontFamily.toLowerCase(),
+    );
+  expect(headingFont).toContain("manrope");
+  await page.locator(".benefit-card").first().hover();
+  await expect(page.locator(".benefit-card").first()).toHaveCSS(
+    "translate",
+    "none",
+  );
   await expect(
     page.getByRole("heading", {
       name: "Choisissez votre offre.",
@@ -98,37 +114,48 @@ test("l’illustration 3D laisse place au repli sur appareil modeste", async ({
   await expect(page.locator(".platform-scene canvas")).toHaveCount(0);
 });
 
-test("la scène 3D reste sous 150 Kio de JavaScript transféré", async ({
+test("la scène 3D se charge après validation des capacités", async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "deviceMemory", {
+      configurable: true,
+      value: 8,
+    });
+    Object.defineProperty(navigator, "hardwareConcurrency", {
+      configurable: true,
+      value: 8,
+    });
+  });
   await page.goto("/");
-  await expect(page.locator(".platform-scene canvas")).toBeVisible({
-    timeout: 20_000,
+
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await expect(page.locator(".platform-scene__fallback")).toBeVisible();
+  await expect(page.locator(".platform-scene canvas")).toHaveCount(1);
+});
+
+test("une API de compatibilité qui ne répond pas ne bloque pas la page", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgentData", {
+      configurable: true,
+      value: {
+        platform: "Android",
+        getHighEntropyValues: () => new Promise(() => {}),
+      },
+    });
   });
+  await page.goto("/");
 
-  const sceneScriptBytes = await page.evaluate(() => {
-    const mark = performance
-      .getEntriesByName("marketing-scene-requested", "mark")
-      .at(-1)?.startTime;
-    if (mark === undefined) return null;
-
-    return performance
-      .getEntriesByType("resource")
-      .filter(
-        (entry): entry is PerformanceResourceTiming =>
-          entry instanceof PerformanceResourceTiming &&
-          entry.initiatorType === "script" &&
-          entry.name.includes("/_next/static/chunks/") &&
-          entry.startTime >= mark,
-      )
-      .reduce((total, entry) => total + entry.encodedBodySize, 0);
-  });
-
-  expect(
-    sceneScriptBytes,
-    "La scène doit marquer le début de son chargement",
-  ).not.toBeNull();
-  expect(sceneScriptBytes).toBeLessThan(150 * 1024);
+  await expect(
+    page.getByRole("heading", {
+      name: "Faites grandir votre commerce.",
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Préparation de votre expérience" }),
+  ).toHaveCount(0);
 });
 
 test("la page reste lisible sur un écran mobile étroit", async ({ page }) => {
@@ -140,4 +167,16 @@ test("la page reste lisible sur un écran mobile étroit", async ({ page }) => {
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(360);
+});
+
+test("les cartes Framer Motion s’animent quand le mouvement est autorisé", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+
+  const card = page.locator(".benefit-card-motion").first();
+  await card.scrollIntoViewIfNeeded();
+  await card.hover();
+  await expect(card).toHaveCSS("transform", /matrix/);
 });

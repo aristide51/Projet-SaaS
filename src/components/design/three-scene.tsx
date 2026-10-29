@@ -20,7 +20,11 @@ import {
   WebGLRenderer,
 } from "three";
 
-export default function ThreeScene() {
+type ThreeSceneProps = Readonly<{
+  onUnavailable?: () => void;
+}>;
+
+export default function ThreeScene({ onUnavailable }: ThreeSceneProps) {
   const mountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,7 +56,7 @@ export default function ThreeScene() {
       if (cancelled || !mount) return;
 
       scene = new Scene();
-      scene.fog = new FogExp2(0x0a2a18, 0.045);
+      scene.fog = new FogExp2(0x035c23, 0.045);
 
       camera = new PerspectiveCamera(
         36,
@@ -62,23 +66,34 @@ export default function ThreeScene() {
       );
       camera.position.set(0, 1.2, 5.2);
 
-      renderer = new WebGLRenderer({
-        alpha: true,
-        antialias: true,
-        powerPreference: "low-power",
-      });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-      renderer.setSize(mount.clientWidth, mount.clientHeight);
-      renderer.outputColorSpace = SRGBColorSpace;
-      renderer.domElement.setAttribute("aria-hidden", "true");
-      renderer.domElement.setAttribute("role", "presentation");
-      mount.appendChild(renderer.domElement);
+      try {
+        renderer = new WebGLRenderer({
+          alpha: true,
+          antialias: true,
+          powerPreference: "high-performance",
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(mount.clientWidth, mount.clientHeight);
+        renderer.outputColorSpace = SRGBColorSpace;
+        renderer.domElement.setAttribute("aria-hidden", "true");
+        renderer.domElement.setAttribute("role", "presentation");
+        mount.appendChild(renderer.domElement);
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message === "Error creating WebGL context."
+        ) {
+          onUnavailable?.();
+          return;
+        }
+        throw error;
+      }
 
       group = new Group();
 
       coreGeometry = new IcosahedronGeometry(1.05, 1);
       coreMaterial = new MeshStandardMaterial({
-        color: 0xf6ea06,
+        color: 0xe10b17,
         metalness: 0.22,
         roughness: 0.28,
         flatShading: true,
@@ -88,7 +103,7 @@ export default function ThreeScene() {
 
       ringGeometry = new TorusGeometry(1.55, 0.035, 16, 64);
       ringMaterial = new MeshStandardMaterial({
-        color: 0xffffff,
+        color: 0xf6e400,
         metalness: 0.4,
         roughness: 0.18,
         transparent: true,
@@ -120,11 +135,11 @@ export default function ThreeScene() {
       particles = new Points(particleGeometry, particleMaterial);
       scene.add(particles);
 
-      scene.add(new HemisphereLight(0xfcf6f0, 0x066624, 1.8));
+      scene.add(new HemisphereLight(0xf7f8f6, 0x035c23, 1.8));
       const keyLight = new DirectionalLight(0xffffff, 2.6);
       keyLight.position.set(3, 4, 5);
       scene.add(keyLight);
-      const fillLight = new DirectionalLight(0xf6ea06, 1.2);
+      const fillLight = new DirectionalLight(0xf6e400, 1.2);
       fillLight.position.set(-3, 1, -3);
       scene.add(fillLight);
 
@@ -225,14 +240,7 @@ export default function ThreeScene() {
       cancelled = true;
       cleanup();
     };
-  }, []);
+  }, [onUnavailable]);
 
-  return (
-    <div
-      aria-hidden="true"
-      className="three-scene"
-      ref={mountRef}
-      style={{ minHeight: 420 }}
-    />
-  );
+  return <div aria-hidden="true" className="three-scene" ref={mountRef} />;
 }

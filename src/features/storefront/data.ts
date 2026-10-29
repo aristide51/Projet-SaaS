@@ -155,8 +155,6 @@ export function getPublicShop(slug: string) {
           "id, slug, name, description, category, logo_path, brand_color, whatsapp, phone, city, district, address, lat, lng, opening_hours, rating_avg, rating_count",
         )
         .eq("slug", slug)
-        .eq("review_status", "approved")
-        .eq("is_suspended", false)
         .maybeSingle();
 
       if (error) {
@@ -199,8 +197,6 @@ export function getPublicProductLinkTarget(productId: string) {
         .from("shops")
         .select("slug")
         .eq("id", product.shop_id)
-        .eq("review_status", "approved")
-        .eq("is_suspended", false)
         .maybeSingle();
 
       if (shopError) {
@@ -288,8 +284,6 @@ export function getPublicSitemapEntries() {
         const { data, error } = await supabase
           .from("shops")
           .select("id, slug, updated_at")
-          .eq("review_status", "approved")
-          .eq("is_suspended", false)
           .order("id")
           .range(offset, offset + pageSize - 1);
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { BusinessPreview } from "@/components/design/business-preview";
 import { MarketingMotion } from "@/components/design/marketing-motion";
+import { MotionSurface } from "@/components/design/motion-surface";
 import { PlatformScene } from "@/components/design/platform-scene";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
@@ -18,17 +19,17 @@ const steps = [
   {
     number: "01",
     title: "Créez votre boutique",
-    description: "Présentez votre activité et vos horaires.",
+    description: "Présentez votre activité.",
   },
   {
     number: "02",
     title: "Ajoutez votre offre",
-    description: "Publiez vos produits ou services et partagez votre lien.",
+    description: "Ajoutez vos produits ou services.",
   },
   {
     number: "03",
     title: "Recevez vos clients",
-    description: "Suivez commandes et rendez-vous depuis votre téléphone.",
+    description: "Suivez commandes et rendez-vous.",
   },
 ];
 
@@ -38,14 +39,14 @@ const faqs = [
     answer: "Non, créez votre boutique sans écrire de code.",
   },
   {
+    question: "Quels appareils et quelle connexion sont nécessaires ?",
+    answer:
+      "Un téléphone récent (Android 13 ou plus récent, iPhone sous iOS 16 ou plus récent) et une connexion 4G stable ou un Wi-Fi rapide. Une vérification automatique contrôle les capacités disponibles.",
+  },
+  {
     question: "Comment les clients peuvent-ils payer ?",
     answer:
       "Les paiements Mobile Money sont déclarés par le client puis vérifiés par le commerçant.",
-  },
-  {
-    question: "Est-ce adapté à un téléphone modeste ?",
-    answer:
-      "Oui, les outils sont conçus pour le mobile et les connexions variables.",
   },
 ];
 
@@ -99,7 +100,6 @@ export default async function HomePage() {
       <header className="marketing-header">
         <div className="marketing-utility-bar">
           <p>Le numérique au rythme des commerces du Burkina Faso</p>
-          <span>Des commerces d’ici, visibles partout</span>
         </div>
         <div className="marketing-header__main">
           <Link className="marketing-brand" href="/">
@@ -165,7 +165,7 @@ export default async function HomePage() {
 
       <MarketingMotion>
         <section aria-labelledby="hero-title" className="marketing-hero">
-          <div className="marketing-hero__copy" data-reveal>
+          <div className="marketing-hero__copy" data-hero-intro>
             <p className="marketing-kicker">Votre commerce. En ligne.</p>
             <h1 id="hero-title">
               Faites grandir
@@ -194,7 +194,7 @@ export default async function HomePage() {
           </div>
           <div
             className="marketing-hero__visual"
-            data-reveal
+            data-hero-art
             id="demonstration"
           >
             <PlatformScene />
@@ -218,7 +218,7 @@ export default async function HomePage() {
           <i aria-hidden="true" />
           <span>Des commandes mieux suivies</span>
           <i aria-hidden="true" />
-          <span>Le savoir-faire d’ici, visible partout</span>
+          <span>Le commerce d’ici, partout</span>
         </section>
 
         <section
@@ -234,49 +234,46 @@ export default async function HomePage() {
               <span>Au même endroit.</span>
             </h2>
           </div>
-          <div className="benefit-grid" data-stagger>
-            <article className="benefit-card" id="vitrine">
-              <span
-                aria-hidden="true"
-                className="benefit-card__icon benefit-card__icon--catalog"
-              >
-                ▦
-              </span>
-              <p className="benefit-card__number">01 / VOTRE VITRINE</p>
-              <h3>Vos produits, bien présentés</h3>
-              <p>Produits et services, faciles à partager.</p>
-              <a href="#fonctionnement">
-                Voir comment ça marche <span aria-hidden="true">→</span>
-              </a>
-            </article>
-            <article className="benefit-card" id="rendez-vous">
-              <span
-                aria-hidden="true"
-                className="benefit-card__icon benefit-card__icon--booking"
-              >
-                ◷
-              </span>
-              <p className="benefit-card__number">02 / VOTRE AGENDA</p>
-              <h3>Vos rendez-vous, simplement</h3>
-              <p>Proposez des créneaux et retrouvez les réservations.</p>
-              <a href="#fonctionnement">
-                Découvrir <span aria-hidden="true">→</span>
-              </a>
-            </article>
-            <article className="benefit-card" id="commandes">
-              <span
-                aria-hidden="true"
-                className="benefit-card__icon benefit-card__icon--orders"
-              >
-                ↗
-              </span>
-              <p className="benefit-card__number">03 / VOS COMMANDES</p>
-              <h3>Le suivi, au même endroit</h3>
-              <p>Consultez et suivez les demandes de vos clients.</p>
-              <a href="#offres">
-                Choisir mon offre <span aria-hidden="true">→</span>
-              </a>
-            </article>
+          <div className="benefit-grid" data-stagger="benefits">
+            <MotionSurface className="benefit-card-motion">
+              <article className="benefit-card" id="vitrine">
+                <p className="benefit-card__number">
+                  <span>01</span>
+                  <span>VOTRE VITRINE</span>
+                </p>
+                <h3>Votre vitrine en ligne</h3>
+                <p>Produits et services, réunis.</p>
+                <a href="#fonctionnement">
+                  Découvrir la vitrine <span aria-hidden="true">→</span>
+                </a>
+              </article>
+            </MotionSurface>
+            <MotionSurface className="benefit-card-motion">
+              <article className="benefit-card" id="rendez-vous">
+                <p className="benefit-card__number">
+                  <span>02</span>
+                  <span>VOTRE AGENDA</span>
+                </p>
+                <h3>Les rendez-vous, simplement</h3>
+                <p>Créneaux et réservations réunis.</p>
+                <a href="#fonctionnement">
+                  Découvrir l’agenda <span aria-hidden="true">→</span>
+                </a>
+              </article>
+            </MotionSurface>
+            <MotionSurface className="benefit-card-motion">
+              <article className="benefit-card" id="commandes">
+                <p className="benefit-card__number">
+                  <span>03</span>
+                  <span>VOS COMMANDES</span>
+                </p>
+                <h3>Les demandes, bien suivies</h3>
+                <p>Commandes et demandes, au même endroit.</p>
+                <a href="#offres">
+                  Voir les offres <span aria-hidden="true">→</span>
+                </a>
+              </article>
+            </MotionSurface>
           </div>
         </section>
 
@@ -291,7 +288,6 @@ export default async function HomePage() {
               De votre idée
               <br />à votre boutique.
             </h2>
-            <p>Pas besoin d’équipe technique. Vous gardez la main.</p>
             <Link
               className="marketing-button marketing-button--light"
               href="/auth/signup"

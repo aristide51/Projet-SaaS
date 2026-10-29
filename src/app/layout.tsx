@@ -1,23 +1,11 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import localFont from "next/font/local";
 import { headers } from "next/headers";
+import "@fontsource-variable/inter";
+import "@fontsource-variable/unbounded";
 import "./globals.css";
 import { getSiteUrl } from "@/lib/site-url";
-
-const manrope = localFont({
-  src: "./fonts/manrope-latin-variable.woff2",
-  variable: "--font-manrope",
-  weight: "200 800",
-  display: "swap",
-});
-
-const dmSans = localFont({
-  src: "./fonts/dm-sans-latin-variable.woff2",
-  variable: "--font-dm-sans",
-  weight: "100 1000",
-  display: "swap",
-});
+import { DeviceCompatibilityGate } from "@/components/design/device-compatibility-gate";
 
 export const metadata: Metadata = {
   metadataBase: getSiteUrl(),
@@ -35,9 +23,9 @@ export default async function RootLayout({
   const requestHeaders = await headers();
 
   return (
-    <html className={`${manrope.variable} ${dmSans.variable}`} lang="fr">
+    <html lang="fr">
       <body>
-        {children}
+        <DeviceCompatibilityGate>{children}</DeviceCompatibilityGate>
         <Script
           nonce={requestHeaders.get("x-nonce") ?? undefined}
           src="/pwa-offline.js"
