@@ -51,6 +51,58 @@ export function MarketingMotion({
             { autoAlpha: 1, y: 0, scale: 1, duration: 0.85 },
             heroIntro ? "-=0.55" : 0,
           );
+
+          const hero = root.querySelector<HTMLElement>(".marketing-hero");
+          if (hero) {
+            gsap.fromTo(
+              heroArt,
+              { yPercent: 0 },
+              {
+                yPercent: 5,
+                ease: "none",
+                scrollTrigger: {
+                  trigger: hero,
+                  start: "top top",
+                  end: "bottom top",
+                  scrub: 0.6,
+                },
+              },
+            );
+          }
+        }
+
+        const stepSequence = root.querySelector<HTMLElement>(
+          "[data-step-sequence]",
+        );
+        const stepProgress = stepSequence?.querySelector<HTMLElement>(
+          "[data-step-progress]",
+        );
+        if (stepSequence && stepProgress) {
+          gsap.fromTo(
+            stepProgress,
+            { scaleY: 0 },
+            {
+              scaleY: 1,
+              ease: "none",
+              scrollTrigger: {
+                trigger: stepSequence,
+                start: "top 72%",
+                end: "bottom 58%",
+                scrub: 0.45,
+              },
+            },
+          );
+
+          stepSequence
+            .querySelectorAll<HTMLElement>(".step-list > li")
+            .forEach((step) => {
+              scrollTrigger?.create({
+                trigger: step,
+                start: "top 56%",
+                end: "bottom 46%",
+                toggleClass: { targets: step, className: "is-active" },
+              });
+            });
         }
 
         root

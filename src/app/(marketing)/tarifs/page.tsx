@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { MarketingSecondaryNav } from "@/components/marketing-secondary-nav";
 import type { Json } from "@/types/database";
 
 export const metadata: Metadata = {
@@ -54,7 +55,8 @@ export default async function TarifsPage() {
   const money = new Intl.NumberFormat("fr-FR");
 
   return (
-    <main className="min-h-screen bg-[#fcf6f0] text-[#1b261f]">
+    <main className="pricing-page min-h-screen">
+      <MarketingSecondaryNav currentPath="/tarifs" />
       <section className="border-b border-[#e7ddd4] bg-white px-4 py-16 md:py-24">
         <div className="mx-auto max-w-5xl text-center">
           <p className="marketing-kicker justify-center">

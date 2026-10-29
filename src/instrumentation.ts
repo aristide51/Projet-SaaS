@@ -1,9 +1,15 @@
-import { validateServerEnv } from "@/lib/env";
+import { hasSupabaseConfig, validateServerEnv } from "@/lib/env";
 import * as Sentry from "@sentry/nextjs";
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    validateServerEnv();
+    const isPublicPreviewWithoutSupabase =
+      process.env.NODE_ENV === "development" && !hasSupabaseConfig();
+
+    if (!isPublicPreviewWithoutSupabase) {
+      validateServerEnv();
+    }
+
     await import("./sentry.server.config");
   }
 

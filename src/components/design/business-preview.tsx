@@ -51,15 +51,17 @@ export function BusinessPreview() {
         role="group"
       >
         {businessTypes.map((type, index) => (
-          <button
+          <m.button
             aria-pressed={activeIndex === index}
             className="business-preview__tab"
             key={type.label}
             onClick={() => setActiveIndex(index)}
             type="button"
+            {...(prefersReducedMotion ? {} : { whileTap: { scale: 0.96 } })}
+            transition={{ duration: prefersReducedMotion ? 0 : 0.16 }}
           >
             {type.label}
-          </button>
+          </m.button>
         ))}
       </div>
       <AnimatePresence mode="wait" initial={false}>

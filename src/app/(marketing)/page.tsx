@@ -1,10 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { BusinessPreview } from "@/components/design/business-preview";
+import { MarketingHeroCarousel } from "@/components/design/marketing-hero-carousel";
 import { MarketingMotion } from "@/components/design/marketing-motion";
 import { MotionSurface } from "@/components/design/motion-surface";
-import { PlatformScene } from "@/components/design/platform-scene";
 import { createClient } from "@/lib/supabase/server";
+import { hasSupabaseConfig } from "@/lib/env";
 import type { Json } from "@/types/database";
 
 export const metadata: Metadata = {
@@ -83,12 +83,15 @@ function getPlanProductLimit(value: Json): number | null | undefined {
 }
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const { data: plans, error } = await supabase
-    .from("plans")
-    .select("code, name, price_monthly, limits, features")
-    .eq("active", true)
-    .order("sort_order");
+  const isSupabaseConfigured = hasSupabaseConfig();
+  const supabase = isSupabaseConfigured ? await createClient() : null;
+  const { data: plans, error } = supabase
+    ? await supabase
+        .from("plans")
+        .select("code, name, price_monthly, limits, features")
+        .eq("active", true)
+        .order("sort_order")
+    : { data: null, error: null };
 
   const money = new Intl.NumberFormat("fr-FR");
 
@@ -99,7 +102,12 @@ export default async function HomePage() {
       </a>
       <header className="marketing-header">
         <div className="marketing-utility-bar">
-          <p>Le numérique au rythme des commerces du Burkina Faso</p>
+          <p>La plateforme numérique des commerces du Burkina Faso</p>
+          <div className="marketing-utility-bar__meta">
+            <span>Tarifs en FCFA</span>
+            <span aria-hidden="true">·</span>
+            <span>Mobile Money</span>
+          </div>
         </div>
         <div className="marketing-header__main">
           <Link className="marketing-brand" href="/">
@@ -109,25 +117,7 @@ export default async function HomePage() {
             <span>Faso Studio</span>
           </Link>
           <nav aria-label="Navigation principale" className="marketing-nav">
-            <div className="marketing-nav__menu">
-              <a className="marketing-nav__trigger" href="#solutions">
-                Solutions
-              </a>
-              <div className="marketing-nav__panel">
-                <a href="#vitrine">
-                  <strong>Vitrine</strong>
-                  <span>Produits et services</span>
-                </a>
-                <a href="#commandes">
-                  <strong>Commandes</strong>
-                  <span>Suivi des demandes</span>
-                </a>
-                <a href="#rendez-vous">
-                  <strong>Rendez-vous</strong>
-                  <span>Créneaux en ligne</span>
-                </a>
-              </div>
-            </div>
+            <a href="#solutions">Solutions</a>
             <a href="#fonctionnement">Comment ça marche</a>
             <a href="#offres">Tarifs</a>
             <Link href="/shops">Annuaire</Link>
@@ -164,51 +154,7 @@ export default async function HomePage() {
       </header>
 
       <MarketingMotion>
-        <section aria-labelledby="hero-title" className="marketing-hero">
-          <div className="marketing-hero__copy" data-hero-intro>
-            <p className="marketing-kicker">Votre commerce. En ligne.</p>
-            <h1 id="hero-title">
-              Faites grandir
-              <br />
-              votre <span>commerce.</span>
-            </h1>
-            <p className="marketing-hero__intro">
-              Boutique, commandes et rendez-vous — simplement.
-            </p>
-            <div className="marketing-hero__actions">
-              <Link className="marketing-button" href="/auth/signup">
-                Créer ma boutique <span aria-hidden="true">→</span>
-              </Link>
-              <a className="marketing-text-link" href="#solutions">
-                Découvrir <span aria-hidden="true">↓</span>
-              </a>
-            </div>
-            <ul aria-label="Points forts" className="marketing-proof">
-              <li>
-                <span aria-hidden="true">✓</span> Mobile d’abord
-              </li>
-              <li>
-                <span aria-hidden="true">✓</span> Offre gratuite
-              </li>
-            </ul>
-          </div>
-          <div
-            className="marketing-hero__visual"
-            data-hero-art
-            id="demonstration"
-          >
-            <PlatformScene />
-            <div
-              aria-hidden="true"
-              className="marketing-orbit marketing-orbit--one"
-            />
-            <div
-              aria-hidden="true"
-              className="marketing-orbit marketing-orbit--two"
-            />
-            <BusinessPreview />
-          </div>
-        </section>
+        <MarketingHeroCarousel />
 
         <section
           aria-label="Pour les commerces locaux"
@@ -295,20 +241,25 @@ export default async function HomePage() {
               Commencer gratuitement <span aria-hidden="true">→</span>
             </Link>
           </div>
-          <ol className="step-list" data-stagger>
-            {steps.map((step) => (
-              <li key={step.number}>
-                <span className="step-list__number">{step.number}</span>
-                <div>
-                  <h3>{step.title}</h3>
-                  <p>{step.description}</p>
-                </div>
-                <span aria-hidden="true" className="step-list__arrow">
-                  ↗
-                </span>
-              </li>
-            ))}
-          </ol>
+          <div className="step-sequence" data-step-sequence>
+            <div aria-hidden="true" className="step-sequence__track">
+              <span data-step-progress />
+            </div>
+            <ol className="step-list" data-stagger>
+              {steps.map((step) => (
+                <li key={step.number}>
+                  <span className="step-list__number">{step.number}</span>
+                  <div>
+                    <h3>{step.title}</h3>
+                    <p>{step.description}</p>
+                  </div>
+                  <span aria-hidden="true" className="step-list__arrow">
+                    ↗
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
         </section>
 
         <section
@@ -321,7 +272,12 @@ export default async function HomePage() {
             <h2 id="plans-title">Choisissez votre offre.</h2>
             <p>Des tarifs mensuels clairs, adaptés à votre activité.</p>
           </div>
-          {error ? (
+          {!isSupabaseConfigured ? (
+            <p className="plan-note" role="status">
+              Les offres détaillées ne sont pas chargées dans cet aperçu. Le
+              reste de la vitrine reste consultable.
+            </p>
+          ) : error ? (
             <p className="plan-note" role="alert">
               Les offres ne sont pas disponibles pour le moment. Vous pouvez
               tout de même créer votre boutique gratuitement.
@@ -393,7 +349,7 @@ export default async function HomePage() {
               })}
             </div>
           )}
-          {!error && (
+          {isSupabaseConfigured && !error && (
             <p className="plan-note">
               Une question sur les offres ?{" "}
               <Link href="/auth/signup">Notre équipe peut vous orienter.</Link>

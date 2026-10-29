@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSecurityHeaders } from "@/lib/security/headers";
 import { isSameOriginWrite } from "@/lib/security/origin";
 import { shouldMarkPublicPwaResponse } from "@/lib/pwa/cache-policy";
+import { hasSupabaseConfig } from "@/lib/env";
 import { updateSession } from "@/lib/supabase/middleware";
 
 export async function proxy(request: NextRequest) {
@@ -23,9 +24,17 @@ export async function proxy(request: NextRequest) {
     effectiveContentSecurityPolicy,
   );
 
-  const response = isSameOriginWrite(request)
-    ? await updateSession(request, requestHeaders)
-    : NextResponse.json({ error: "Origine non autorisée." }, { status: 403 });
+  const isStaticHomePreview =
+    process.env.NODE_ENV === "development" &&
+    !hasSupabaseConfig() &&
+    request.nextUrl.pathname === "/" &&
+    (request.method === "GET" || request.method === "HEAD");
+
+  const response = isStaticHomePreview
+    ? NextResponse.next({ request: { headers: requestHeaders } })
+    : isSameOriginWrite(request)
+      ? await updateSession(request, requestHeaders)
+      : NextResponse.json({ error: "Origine non autorisée." }, { status: 403 });
 
   responseHeaders.forEach((value, name) => response.headers.set(name, value));
   if (

@@ -15,6 +15,15 @@ const serverEnvSchema = z.object({
   TURNSTILE_SECRET_KEY: z.union([z.string().min(1), z.literal("")]).optional(),
 });
 
+export function hasSupabaseConfig(
+  environment: Record<string, string | undefined> = process.env,
+) {
+  return Boolean(
+    environment.NEXT_PUBLIC_SUPABASE_URL &&
+      environment.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
+}
+
 export function validateServerEnv(
   environment: Record<string, string | undefined> = process.env,
 ) {
