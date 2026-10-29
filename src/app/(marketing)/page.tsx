@@ -5,6 +5,7 @@ import { MarketingMotion } from "@/components/design/marketing-motion";
 import { MotionSurface } from "@/components/design/motion-surface";
 import { PlatformScene } from "@/components/design/platform-scene";
 import { createClient } from "@/lib/supabase/server";
+import { hasSupabaseConfig } from "@/lib/env";
 import type { Json } from "@/types/database";
 
 export const metadata: Metadata = {
@@ -83,12 +84,15 @@ function getPlanProductLimit(value: Json): number | null | undefined {
 }
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const { data: plans, error } = await supabase
-    .from("plans")
-    .select("code, name, price_monthly, limits, features")
-    .eq("active", true)
-    .order("sort_order");
+  const isSupabaseConfigured = hasSupabaseConfig();
+  const supabase = isSupabaseConfigured ? await createClient() : null;
+  const { data: plans, error } = supabase
+    ? await supabase
+        .from("plans")
+        .select("code, name, price_monthly, limits, features")
+        .eq("active", true)
+        .order("sort_order")
+    : { data: null, error: null };
 
   const money = new Intl.NumberFormat("fr-FR");
 
@@ -326,7 +330,12 @@ export default async function HomePage() {
             <h2 id="plans-title">Choisissez votre offre.</h2>
             <p>Des tarifs mensuels clairs, adaptés à votre activité.</p>
           </div>
-          {error ? (
+          {!isSupabaseConfigured ? (
+            <p className="plan-note" role="status">
+              Les offres détaillées ne sont pas chargées dans cet aperçu. Le
+              reste de la vitrine reste consultable.
+            </p>
+          ) : error ? (
             <p className="plan-note" role="alert">
               Les offres ne sont pas disponibles pour le moment. Vous pouvez
               tout de même créer votre boutique gratuitement.
@@ -398,7 +407,7 @@ export default async function HomePage() {
               })}
             </div>
           )}
-          {!error && (
+          {isSupabaseConfigured && !error && (
             <p className="plan-note">
               Une question sur les offres ?{" "}
               <Link href="/auth/signup">Notre équipe peut vous orienter.</Link>

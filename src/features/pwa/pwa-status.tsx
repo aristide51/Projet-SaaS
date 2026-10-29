@@ -90,7 +90,7 @@ export function PwaStatus({ showInstall = false }: { showInstall?: boolean }) {
           await result.update();
         })
         .catch(() => {
-          if (active) {
+          if (active && process.env.NODE_ENV === "production") {
             setMessage("Le mode hors connexion n’a pas pu être activé.");
           }
         });
