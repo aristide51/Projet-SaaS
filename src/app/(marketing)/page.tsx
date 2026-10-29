@@ -1,9 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { BusinessPreview } from "@/components/design/business-preview";
+import { MarketingHeroCarousel } from "@/components/design/marketing-hero-carousel";
 import { MarketingMotion } from "@/components/design/marketing-motion";
 import { MotionSurface } from "@/components/design/motion-surface";
-import { PlatformScene } from "@/components/design/platform-scene";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseConfig } from "@/lib/env";
 import type { Json } from "@/types/database";
@@ -103,7 +102,12 @@ export default async function HomePage() {
       </a>
       <header className="marketing-header">
         <div className="marketing-utility-bar">
-          <p>Le numérique au rythme des commerces du Burkina Faso</p>
+          <p>La plateforme numérique des commerces du Burkina Faso</p>
+          <div className="marketing-utility-bar__meta">
+            <span>Tarifs en FCFA</span>
+            <span aria-hidden="true">·</span>
+            <span>Mobile Money</span>
+          </div>
         </div>
         <div className="marketing-header__main">
           <Link className="marketing-brand" href="/">
@@ -113,25 +117,7 @@ export default async function HomePage() {
             <span>Faso Studio</span>
           </Link>
           <nav aria-label="Navigation principale" className="marketing-nav">
-            <div className="marketing-nav__menu">
-              <a className="marketing-nav__trigger" href="#solutions">
-                Solutions
-              </a>
-              <div className="marketing-nav__panel">
-                <a href="#vitrine">
-                  <strong>Vitrine</strong>
-                  <span>Produits et services</span>
-                </a>
-                <a href="#commandes">
-                  <strong>Commandes</strong>
-                  <span>Suivi des demandes</span>
-                </a>
-                <a href="#rendez-vous">
-                  <strong>Rendez-vous</strong>
-                  <span>Créneaux en ligne</span>
-                </a>
-              </div>
-            </div>
+            <a href="#solutions">Solutions</a>
             <a href="#fonctionnement">Comment ça marche</a>
             <a href="#offres">Tarifs</a>
             <Link href="/shops">Annuaire</Link>
@@ -168,51 +154,7 @@ export default async function HomePage() {
       </header>
 
       <MarketingMotion>
-        <section aria-labelledby="hero-title" className="marketing-hero">
-          <div className="marketing-hero__copy" data-hero-intro>
-            <p className="marketing-kicker">Votre commerce. En ligne.</p>
-            <h1 id="hero-title">
-              Faites grandir
-              <br />
-              votre <span>commerce.</span>
-            </h1>
-            <p className="marketing-hero__intro">
-              Boutique, commandes et rendez-vous — simplement.
-            </p>
-            <div className="marketing-hero__actions">
-              <Link className="marketing-button" href="/auth/signup">
-                Créer ma boutique <span aria-hidden="true">→</span>
-              </Link>
-              <a className="marketing-text-link" href="#solutions">
-                Découvrir <span aria-hidden="true">↓</span>
-              </a>
-            </div>
-            <ul aria-label="Points forts" className="marketing-proof">
-              <li>
-                <span aria-hidden="true">✓</span> Mobile d’abord
-              </li>
-              <li>
-                <span aria-hidden="true">✓</span> Offre gratuite
-              </li>
-            </ul>
-          </div>
-          <div
-            className="marketing-hero__visual"
-            data-hero-art
-            id="demonstration"
-          >
-            <PlatformScene />
-            <div
-              aria-hidden="true"
-              className="marketing-orbit marketing-orbit--one"
-            />
-            <div
-              aria-hidden="true"
-              className="marketing-orbit marketing-orbit--two"
-            />
-            <BusinessPreview />
-          </div>
-        </section>
+        <MarketingHeroCarousel />
 
         <section
           aria-label="Pour les commerces locaux"
