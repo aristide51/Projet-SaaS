@@ -9635,6 +9635,82 @@ textarea:focus-visible,
   color: var(--marketing-red);
 }
 
+.marketing-nav a,
+.marketing-login {
+  position: relative;
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.5rem;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.marketing-nav a::after,
+.marketing-login::after {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.25rem;
+  left: 0.75rem;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--marketing-red), #f7c100);
+  content: "";
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.marketing-nav a:hover,
+.marketing-nav a:focus-visible,
+.marketing-login:hover,
+.marketing-login:focus-visible {
+  background-color: #f6f5f0;
+  color: #0b1712;
+  transform: translateY(-1px);
+}
+
+.marketing-nav a:hover::after,
+.marketing-nav a:focus-visible::after,
+.marketing-login:hover::after,
+.marketing-login:focus-visible::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-nav a,
+  .marketing-login {
+    transition:
+      color 120ms ease,
+      background-color 120ms ease;
+  }
+
+  .marketing-nav a::after,
+  .marketing-login::after {
+    opacity: 0;
+    transform: none;
+    transition: opacity 120ms ease;
+  }
+
+  .marketing-nav a:hover,
+  .marketing-nav a:focus-visible,
+  .marketing-login:hover,
+  .marketing-login:focus-visible {
+    transform: none;
+  }
+
+  .marketing-nav a:hover::after,
+  .marketing-nav a:focus-visible::after,
+  .marketing-login:hover::after,
+  .marketing-login:focus-visible::after {
+    opacity: 1;
+  }
+}
+
 .marketing-button,
 .marketing-button--small {
   border: 1px solid var(--marketing-red);
