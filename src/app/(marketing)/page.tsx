@@ -295,20 +295,25 @@ export default async function HomePage() {
               Commencer gratuitement <span aria-hidden="true">→</span>
             </Link>
           </div>
-          <ol className="step-list" data-stagger>
-            {steps.map((step) => (
-              <li key={step.number}>
-                <span className="step-list__number">{step.number}</span>
-                <div>
-                  <h3>{step.title}</h3>
-                  <p>{step.description}</p>
-                </div>
-                <span aria-hidden="true" className="step-list__arrow">
-                  ↗
-                </span>
-              </li>
-            ))}
-          </ol>
+          <div className="step-sequence" data-step-sequence>
+            <div aria-hidden="true" className="step-sequence__track">
+              <span data-step-progress />
+            </div>
+            <ol className="step-list" data-stagger>
+              {steps.map((step) => (
+                <li key={step.number}>
+                  <span className="step-list__number">{step.number}</span>
+                  <div>
+                    <h3>{step.title}</h3>
+                    <p>{step.description}</p>
+                  </div>
+                  <span aria-hidden="true" className="step-list__arrow">
+                    ↗
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
         </section>
 
         <section
