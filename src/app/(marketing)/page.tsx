@@ -327,8 +327,10 @@ export default async function HomePage() {
           </div>
           {error ? (
             <p className="plan-note" role="alert">
-              Les tarifs sont temporairement indisponibles. Démarrez Supabase
-              local avec <code>pnpm db:start</code>, puis actualisez la page.
+              Les offres ne sont pas disponibles pour le moment. Vous pouvez
+              tout de même créer votre boutique gratuitement.
+              <br />
+              <Link href="/auth/signup">Commencer maintenant</Link>
             </p>
           ) : (
             <div className="plan-grid" data-stagger>

@@ -5971,7 +5971,7 @@ textarea:focus-visible,
   }
 }
 
-@media (width <= 640px) {
+@media (width <= 760px) {
   .marketing-utility-bar,
   .marketing-header__main {
     width: min(100% - 2rem, 76rem);
@@ -6860,6 +6860,19 @@ textarea:focus-visible,
 
   .marketing-final-cta {
     min-height: 16rem;
+  }
+}
+
+@media (width <= 760px) {
+  .marketing-mobile-menu > summary {
+    border-color: #dce5dc;
+    color: var(--marketing-forest-dark);
+  }
+
+  .marketing-mobile-menu nav .marketing-button {
+    border-color: var(--marketing-red);
+    background: var(--marketing-red);
+    color: #fff;
   }
 }
 
