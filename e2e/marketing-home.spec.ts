@@ -48,6 +48,11 @@ test("page d’accueil marketing accessible et complète", async ({ page }) => {
       name: "Choisissez votre offre.",
     }),
   ).toBeVisible();
+  const reducedMotionOffer = page.locator(".pricing-offer-card").first();
+  if (await reducedMotionOffer.count()) {
+    await reducedMotionOffer.hover();
+    await expect(reducedMotionOffer).toHaveCSS("transform", "none");
+  }
   await expect(
     page
       .locator(".marketing-hero")
@@ -193,4 +198,11 @@ test("les cartes Framer Motion s’animent quand le mouvement est autorisé", as
   await card.scrollIntoViewIfNeeded();
   await card.hover();
   await expect(card).toHaveCSS("transform", /matrix/);
+
+  const offerCard = page.locator(".pricing-offer-card").first();
+  if (await offerCard.count()) {
+    await offerCard.scrollIntoViewIfNeeded();
+    await offerCard.hover();
+    await expect(offerCard).toHaveCSS("transform", /matrix/);
+  }
 });
