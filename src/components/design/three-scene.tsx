@@ -52,7 +52,7 @@ export default function ThreeScene() {
       if (cancelled || !mount) return;
 
       scene = new Scene();
-      scene.fog = new FogExp2(0x111a15, 0.045);
+      scene.fog = new FogExp2(0x0a2a18, 0.045);
 
       camera = new PerspectiveCamera(
         36,
@@ -78,7 +78,7 @@ export default function ThreeScene() {
 
       coreGeometry = new IcosahedronGeometry(1.05, 1);
       coreMaterial = new MeshStandardMaterial({
-        color: 0xd2f284,
+        color: 0xf6ea06,
         metalness: 0.22,
         roughness: 0.28,
         flatShading: true,
@@ -120,11 +120,11 @@ export default function ThreeScene() {
       particles = new Points(particleGeometry, particleMaterial);
       scene.add(particles);
 
-      scene.add(new HemisphereLight(0xf6ffe8, 0x617c42, 1.8));
+      scene.add(new HemisphereLight(0xfcf6f0, 0x066624, 1.8));
       const keyLight = new DirectionalLight(0xffffff, 2.6);
       keyLight.position.set(3, 4, 5);
       scene.add(keyLight);
-      const fillLight = new DirectionalLight(0xd2f284, 1.2);
+      const fillLight = new DirectionalLight(0xf6ea06, 1.2);
       fillLight.position.set(-3, 1, -3);
       scene.add(fillLight);
 

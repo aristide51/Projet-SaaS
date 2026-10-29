@@ -21,6 +21,9 @@ import {
 import { absoluteSiteUrl } from "@/lib/site-url";
 import { logError } from "@/lib/monitoring/sentry";
 import { StorefrontShare } from "@/features/storefront/storefront-share";
+import { Button } from "@/components/ui/button-enhanced";
+import { Card } from "@/components/ui/card-enhanced";
+import { Counter } from "@/components/ui/counter";
 
 type PublicShopPageProps = {
   params: Promise<{ shop: string }>;
@@ -170,32 +173,31 @@ export default async function PublicShopPage({
 
       <nav aria-label="Contacter la boutique" className="public-shop-actions">
         {shop.whatsapp ? (
-          <a
-            className="ui-button ui-button--primary public-shop-brand-button"
-            href={`https://wa.me/${shop.whatsapp.replace(/\D/g, "")}`}
-            rel="noreferrer"
-            target="_blank"
-          >
-            Écrire sur WhatsApp
-          </a>
+          <Button variant="primary" size="lg" asChild>
+            <a
+              href={`https://wa.me/${shop.whatsapp.replace(/\D/g, "")}`}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Écrire sur WhatsApp
+            </a>
+          </Button>
         ) : null}
         {shop.phone ? (
-          <a
-            className="ui-button ui-button--secondary"
-            href={`tel:${shop.phone}`}
-          >
-            Appeler la boutique
-          </a>
+          <Button variant="secondary" size="lg" asChild>
+            <a href={`tel:${shop.phone}`}>Appeler la boutique</a>
+          </Button>
         ) : null}
         {mapUrl ? (
-          <a
-            className="ui-button ui-button--secondary"
-            href={mapUrl}
-            rel="noreferrer"
-            target="_blank"
-          >
-            Voir sur la carte
-          </a>
+          <Button variant="outline" size="lg" asChild>
+            <a
+              href={mapUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Voir sur la carte
+            </a>
+          </Button>
         ) : null}
       </nav>
 
@@ -204,9 +206,18 @@ export default async function PublicShopPage({
         className="public-shop-catalog"
       >
         <div className="public-shop-section-heading">
-          <div>
-            <p className="auth-eyebrow">La sélection de la boutique</p>
-            <h2 id="storefront-catalog-title">Produits et services</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p className="auth-eyebrow">La sélection de la boutique</p>
+              <h2 id="storefront-catalog-title">Produits et services</h2>
+            </div>
+            <div className="flex gap-4 text-right sm:text-left">
+              <Counter value={catalog.items.length} label="Produits & services" />
+              <Counter
+                value={shop.rating_avg.toFixed(1)}
+                label={shop.rating_count ? "Note moyenne /5" : "Pas encore notée"}
+              />
+            </div>
           </div>
           <span>{catalog.items.length} résultat(s)</span>
         </div>
@@ -238,12 +249,9 @@ export default async function PublicShopPage({
                 </option>
               ))}
             </select>
-            <button
-              className="ui-button ui-button--primary public-shop-brand-button"
-              type="submit"
-            >
+            <Button variant="primary" type="submit">
               Rechercher
-            </button>
+            </Button>
           </div>
         </form>
 
@@ -316,12 +324,13 @@ export default async function PublicShopPage({
                   ) : (
                     <article className="public-shop-product-entry">
                       <div className="public-shop-product-card">{card}</div>
-                      <Link
-                        className="ui-button ui-button--secondary"
-                        href={`/${encodeURIComponent(shop.slug)}/bookings?service=${encodeURIComponent(item.id)}`}
-                      >
-                        Prendre rendez-vous
-                      </Link>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link
+                          href={`/${encodeURIComponent(shop.slug)}/bookings?service=${encodeURIComponent(item.id)}`}
+                        >
+                          Prendre rendez-vous
+                        </Link>
+                      </Button>
                     </article>
                   )}
                 </li>
@@ -348,35 +357,39 @@ export default async function PublicShopPage({
         aria-labelledby="storefront-hours-title"
         className="public-shop-info"
       >
-        <div>
-          <p className="auth-eyebrow">Nous rendre visite</p>
-          <h2 id="storefront-hours-title">Horaires d’ouverture</h2>
-          <p>
-            {[shop.address, shop.district, shop.city]
-              .filter(Boolean)
-              .join(", ")}
-          </p>
-        </div>
-        <dl className="public-shop-hours">
-          {openingHours.map((day) => (
-            <div key={day.label}>
-              <dt>{day.label}</dt>
-              <dd>{day.value}</dd>
-            </div>
-          ))}
-        </dl>
+        <Card variant="elevated" className="p-6 card-lift reveal fade-up">
+          <div>
+            <p className="auth-eyebrow">Nous rendre visite</p>
+            <h2 id="storefront-hours-title">Horaires d’ouverture</h2>
+            <p>
+              {[shop.address, shop.district, shop.city]
+                .filter(Boolean)
+                .join(", ")}
+            </p>
+          </div>
+          <dl className="public-shop-hours mt-6">
+            {openingHours.map((day) => (
+              <div key={day.label}>
+                <dt>{day.label}</dt>
+                <dd>{day.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
       </section>
 
       <footer className="public-shop-footer">
-        {shop.rating_count ? (
-          <p>
-            Note moyenne :{" "}
-            <strong>{Number(shop.rating_avg).toFixed(1)}/5</strong> (
-            {shop.rating_count} avis)
-          </p>
-        ) : (
-          <p>Cette boutique n’a pas encore reçu d’avis.</p>
-        )}
+        <Card variant="product" className="p-6 card-lift reveal fade-up">
+          {shop.rating_count ? (
+            <p>
+              Note moyenne :{" "}
+              <strong>{Number(shop.rating_avg).toFixed(1)}/5</strong> (
+              {shop.rating_count} avis)
+            </p>
+          ) : (
+            <p>Cette boutique n’a pas encore reçu d’avis.</p>
+          )}
+        </Card>
       </footer>
     </main>
   );

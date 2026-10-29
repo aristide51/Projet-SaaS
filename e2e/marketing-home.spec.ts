@@ -7,21 +7,24 @@ test("page d’accueil marketing accessible et complète", async ({ page }) => {
 
   await expect(
     page.getByRole("heading", {
-      name: "Votre commerce mérite sa place en ligne.",
+      name: "Faites grandir votre commerce.",
     }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", {
-      name: "Un produit qui se construit avec le terrain.",
+      name: "Tout votre commerce. Au même endroit.",
     }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", {
-      name: "Commencez léger. Évoluez à votre rythme.",
+      name: "Choisissez votre offre.",
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Ouvrir ma boutique" }),
+    page
+      .locator(".marketing-hero")
+      .locator(".marketing-hero__actions")
+      .getByRole("link", { name: "Créer ma boutique" }),
   ).toHaveAttribute("href", "/auth/signup");
 
   const violations = await new AxeBuilder({ page })
@@ -35,6 +38,49 @@ test("page d’accueil marketing accessible et complète", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(firstFaq).toHaveAttribute("open", "");
   await expect(firstFaq).toContainText(/sans écrire de code/);
+
+  const solutionsMenu = page.locator(".marketing-nav__menu");
+  const solutionsTrigger = solutionsMenu.getByRole("link", {
+    name: "Solutions",
+  });
+  const solutionsPanel = solutionsMenu.locator(".marketing-nav__panel");
+  await expect(solutionsPanel).toBeHidden();
+  await solutionsTrigger.hover();
+  await expect(
+    solutionsMenu.getByRole("link", { name: /Vitrine/ }),
+  ).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(solutionsPanel).toBeHidden();
+  await solutionsTrigger.focus();
+  await expect(solutionsPanel).toBeVisible();
+});
+
+test("l’aperçu s’adapte aux métiers et le menu mobile reste utilisable", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto("/");
+
+  const preview = page.locator(".business-preview");
+  await expect(
+    preview.getByRole("heading", {
+      name: "Une vitrine à partager",
+    }),
+  ).toBeVisible();
+  await preview.getByRole("button", { name: "Garage" }).click();
+  await expect(
+    preview.getByRole("heading", {
+      name: "Vos services en ligne",
+    }),
+  ).toBeVisible();
+
+  const menu = page.locator(".marketing-mobile-menu");
+  await menu.locator("summary").click();
+  await expect(menu.getByRole("navigation")).toBeVisible();
+  await expect(menu.getByRole("link", { name: "Tarifs" })).toHaveAttribute(
+    "href",
+    "#offres",
+  );
 });
 
 test("l’illustration 3D laisse place au repli sur appareil modeste", async ({

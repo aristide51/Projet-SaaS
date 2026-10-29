@@ -104,7 +104,6 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       </main>
     );
   }
-
   const isTrash = params.view === "trash";
   const query = params.q?.trim().slice(0, 160) ?? "";
   const { data: productIds, error: productIdsError } = isTrash

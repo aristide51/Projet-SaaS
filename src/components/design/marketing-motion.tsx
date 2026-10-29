@@ -51,13 +51,14 @@ export function MarketingMotion({
           .forEach((element) => {
             gsap.fromTo(
               element.children,
-              { autoAlpha: 0, y: 16 },
+              { autoAlpha: 0, y: 20, scale: 0.97 },
               {
                 autoAlpha: 1,
                 y: 0,
-                duration: 0.35,
-                stagger: 0.08,
-                ease: "power2.out",
+                scale: 1,
+                duration: 0.5,
+                stagger: 0.1,
+                ease: "power3.out",
                 scrollTrigger: {
                   trigger: element,
                   start: "top 88%",

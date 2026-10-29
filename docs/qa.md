@@ -2,18 +2,21 @@
 
 ## Direction visuelle
 
-La page marketing adopte une identité Faso Studio originale : fond ivoire,
-vert profond, accent safran, typographies locales Manrope et DM Sans déjà
-présentes dans le projet. La référence IObit a servi uniquement à repérer des
-principes généraux de présentation produit, de hiérarchie, de démonstration et
-d’appels à l’action ; aucune composition, illustration, marque ou animation
-propriétaire n’est reprise.
+La page marketing reprend la palette FasoCode-X demandée : vert profond
+(`#066624`, `#0A2A18`), rouge (`#CC0018`), jaune (`#F6EA06`) réservé aux
+accents sur fond sombre, et blanc chaud (`#FCF6F0`). Elle conserve les
+typographies Manrope et DM Sans du projet. FasoCode-X et IObit ont servi
+uniquement à repérer des principes généraux de hiérarchie, de rythme visuel,
+de démonstration et de navigation au survol ; aucune composition,
+illustration, marque ou animation propriétaire n’est reprise.
 
-La page d’accueil présente la promesse, un aperçu produit, les bénéfices, le
-parcours en trois étapes, les plans chargés depuis la base, la démarche de
-retour pilote, une FAQ et les appels à l’action. Aucun avis client ni résultat
-commercial n’est inventé : les témoignages seront ajoutés après accord des
-commerces concernés.
+L’accueil a été allégé : promesse courte, aperçu d’interface interactif,
+fonctionnalités, étapes, offres, points de confiance, FAQ courte et appel à
+l’action. Les sous-rubriques de « Solutions » apparaissent au survol ou au
+focus clavier ; sur mobile, le menu reste ouvrable au toucher. Les cartes de
+fonctionnalités s’animent ensemble à leur entrée dans le viewport, puis
+réagissent au survol. L’aperçu est identifié comme une démonstration ; aucune
+photo, statistique, échéance promotionnelle ou citation client n’est inventée.
 
 ## Mouvement et rendu 3D
 
@@ -30,10 +33,12 @@ commerces concernés.
 
 ## Vérification automatisée
 
-`e2e/marketing-home.spec.ts` couvre l’essentiel du contenu et des liens,
-l’analyse axe WCAG 2.2 AA, l’utilisation de la FAQ au clavier, le repli 3D sur
-un appareil simulé à faible mémoire et l’absence de débordement à 360 px.
-Exécuter avec `pnpm test:e2e -- e2e/marketing-home.spec.ts`.
+`e2e/marketing-home.spec.ts` couvre le contenu condensé, l’analyse axe WCAG
+2.2 AA, l’ouverture du méga-menu au survol et au focus clavier, la FAQ au
+clavier, le menu mobile, le changement de métier dans l’aperçu, le repli 3D
+sur un appareil simulé à faible mémoire, le budget de JavaScript transféré de
+la scène en production et l’absence de débordement à 360 px. Exécuter avec
+`pnpm test:e2e -- e2e/marketing-home.spec.ts`.
 
 Le workflow Lighthouse CI inclut l’accueil en émulation mobile et applique le
 budget LCP de 2,5 s ainsi que les budgets de performance existants.
