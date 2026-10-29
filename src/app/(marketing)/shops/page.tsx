@@ -6,6 +6,7 @@ import {
   searchPublicShops,
   type ShopDirectoryFilters,
 } from "@/features/storefront/data";
+import { MarketingSecondaryNav } from "@/components/marketing-secondary-nav";
 import { absoluteSiteUrl } from "@/lib/site-url";
 
 type DirectorySearchParams = {
@@ -102,7 +103,8 @@ export default async function ShopDirectoryPage({
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900 sm:px-6 lg:py-16">
+    <main className="directory-page min-h-screen px-4 py-10 sm:px-6 lg:py-16">
+      <MarketingSecondaryNav currentPath="/shops" />
       <div className="mx-auto max-w-6xl">
         <nav aria-label="Fil d’Ariane" className="mb-8 text-sm text-slate-600">
           <Link className="underline underline-offset-4" href="/">
