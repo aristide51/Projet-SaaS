@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { m, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion, type Variants } from "framer-motion";
 
 type PricingOffer = Readonly<{
   code: string;
@@ -17,8 +17,34 @@ type PricingOffer = Readonly<{
 type ArtworkVariant = 0 | 1 | 2;
 
 const cardBackgrounds = ["#4f46e5", "#9333ea", "#be185d"] as const;
-const cardTransition = { duration: 1, ease: "backInOut" } as const;
-const cardVariants = { hover: { scale: 1.05, zIndex: 2 } };
+const cardTransition = { duration: 0.85, ease: "backInOut" } as const;
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (index: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.55,
+      delay: Math.min(index * 0.12, 0.36),
+      ease: "easeOut",
+    },
+  }),
+  reducedHidden: { opacity: 0 },
+  reducedVisible: (index: number) => ({
+    opacity: 1,
+    transition: {
+      duration: 0.2,
+      delay: Math.min(index * 0.06, 0.18),
+      ease: "linear",
+    },
+  }),
+  reducedHover: {
+    filter: "brightness(1.08)",
+    transition: { duration: 0.18 },
+  },
+  hover: { scale: 1.05, y: -8, zIndex: 2, transition: cardTransition },
+};
 const priceVariants = { hover: { scale: 1 } };
 
 export function PricingOfferCards({
@@ -27,7 +53,7 @@ export function PricingOfferCards({
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <div className="pricing-offer-grid" data-reveal>
+    <div className="pricing-offer-grid">
       {offers.map((offer, index) => (
         <m.article
           aria-labelledby={`pricing-offer-${offer.code}`}
@@ -36,9 +62,15 @@ export function PricingOfferCards({
           style={{
             backgroundColor: cardBackgrounds[index % cardBackgrounds.length],
           }}
-          transition={cardTransition}
+          initial={prefersReducedMotion ? "reducedHidden" : "hidden"}
+          whileInView={prefersReducedMotion ? "reducedVisible" : "visible"}
+          viewport={{ once: true, amount: 0.25 }}
+          whileHover={prefersReducedMotion ? "reducedHover" : "hover"}
+          whileTap={
+            prefersReducedMotion ? "reducedHover" : { scale: 0.985 }
+          }
+          custom={index}
           variants={cardVariants}
-          {...(prefersReducedMotion ? {} : { whileHover: "hover" })}
         >
           <PricingOfferArtwork variant={(index % 3) as ArtworkVariant} />
           <div className="pricing-offer-card__body">
