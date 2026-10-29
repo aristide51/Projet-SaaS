@@ -11089,10 +11089,22 @@ textarea:focus-visible,
   margin: 2.5rem auto 0;
 }
 
+.pricing-offer-card-motion {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.pricing-offer-card-motion:hover,
+.pricing-offer-card-motion:focus-within {
+  z-index: 2;
+}
+
 .pricing-offer-card {
   position: relative;
   isolation: isolate;
   display: flex;
+  flex: 1;
   min-width: 0;
   min-height: 29rem;
   flex-direction: column;

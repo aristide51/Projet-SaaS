@@ -27,66 +27,67 @@ export function PricingOfferCards({
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <div className="pricing-offer-grid" data-reveal>
+    <div className="pricing-offer-grid" data-stagger="offers">
       {offers.map((offer, index) => (
-        <m.article
-          aria-labelledby={`pricing-offer-${offer.code}`}
-          className="pricing-offer-card"
-          key={offer.code}
-          style={{
-            backgroundColor: cardBackgrounds[index % cardBackgrounds.length],
-          }}
-          transition={cardTransition}
-          variants={cardVariants}
-          {...(prefersReducedMotion ? {} : { whileHover: "hover" })}
-        >
-          <PricingOfferArtwork variant={(index % 3) as ArtworkVariant} />
-          <div className="pricing-offer-card__body">
-            <div className="pricing-offer-card__heading">
-              <h3
-                className="pricing-offer-card__name"
-                id={`pricing-offer-${offer.code}`}
-              >
-                {offer.name}
-              </h3>
-              {offer.featured && (
-                <span className="pricing-offer-card__featured">
-                  Pour grandir
-                </span>
-              )}
+        <div className="pricing-offer-card-motion" key={offer.code}>
+          <m.article
+            aria-labelledby={`pricing-offer-${offer.code}`}
+            className="pricing-offer-card"
+            style={{
+              backgroundColor: cardBackgrounds[index % cardBackgrounds.length],
+            }}
+            transition={cardTransition}
+            variants={cardVariants}
+            {...(prefersReducedMotion ? {} : { whileHover: "hover" })}
+          >
+            <PricingOfferArtwork variant={(index % 3) as ArtworkVariant} />
+            <div className="pricing-offer-card__body">
+              <div className="pricing-offer-card__heading">
+                <h3
+                  className="pricing-offer-card__name"
+                  id={`pricing-offer-${offer.code}`}
+                >
+                  {offer.name}
+                </h3>
+                {offer.featured && (
+                  <span className="pricing-offer-card__featured">
+                    Pour grandir
+                  </span>
+                )}
+              </div>
+              <p className="pricing-offer-card__price">
+                <m.span
+                  className="pricing-offer-card__amount"
+                  initial={prefersReducedMotion ? false : { scale: 0.9 }}
+                  transition={cardTransition}
+                  variants={priceVariants}
+                >
+                  {offer.isFree ? "Gratuit" : offer.formattedPrice}
+                </m.span>
+                {!offer.isFree && (
+                  <span className="pricing-offer-card__unit">
+                    FCFA <span>/ mois</span>
+                  </span>
+                )}
+              </p>
+              <p className="pricing-offer-card__description">
+                {offer.description}
+              </p>
+              <ul className="pricing-offer-card__benefits">
+                {offer.benefits.map((benefit, benefitIndex) => (
+                  <li key={`${offer.code}-${benefitIndex}`}>
+                    <span aria-hidden="true">✓</span>
+                    {benefit}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <p className="pricing-offer-card__price">
-              <m.span
-                className="pricing-offer-card__amount"
-                initial={prefersReducedMotion ? false : { scale: 0.9 }}
-                transition={cardTransition}
-                variants={priceVariants}
-              >
-                {offer.isFree ? "Gratuit" : offer.formattedPrice}
-              </m.span>
-              {!offer.isFree && (
-                <span className="pricing-offer-card__unit">
-                  FCFA <span>/ mois</span>
-                </span>
-              )}
-            </p>
-            <p className="pricing-offer-card__description">
-              {offer.description}
-            </p>
-            <ul className="pricing-offer-card__benefits">
-              {offer.benefits.map((benefit, benefitIndex) => (
-                <li key={`${offer.code}-${benefitIndex}`}>
-                  <span aria-hidden="true">✓</span>
-                  {benefit}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <Link className="pricing-offer-card__cta" href="/auth/signup">
-            {offer.cta}
-            <span aria-hidden="true">→</span>
-          </Link>
-        </m.article>
+            <Link className="pricing-offer-card__cta" href="/auth/signup">
+              {offer.cta}
+              <span aria-hidden="true">→</span>
+            </Link>
+          </m.article>
+        </div>
       ))}
     </div>
   );

@@ -128,6 +128,7 @@ export function MarketingMotion({
           .querySelectorAll<HTMLElement>("[data-stagger]")
           .forEach((element) => {
             const isBenefitGrid = element.dataset.stagger === "benefits";
+            const isOfferGrid = element.dataset.stagger === "offers";
             const targets = isBenefitGrid
               ? element.querySelectorAll<HTMLElement>(".benefit-card")
               : element.children;
@@ -135,17 +136,17 @@ export function MarketingMotion({
               targets,
               {
                 autoAlpha: 0,
-                y: isBenefitGrid ? 34 : 20,
-                scale: isBenefitGrid ? 0.94 : 0.97,
-                rotationX: isBenefitGrid ? 7 : 0,
+                y: isBenefitGrid ? 34 : isOfferGrid ? 30 : 20,
+                scale: isBenefitGrid ? 0.94 : isOfferGrid ? 0.96 : 0.97,
+                rotationX: isBenefitGrid ? 7 : isOfferGrid ? 4 : 0,
               },
               {
                 autoAlpha: 1,
                 y: 0,
                 scale: 1,
                 rotationX: 0,
-                duration: isBenefitGrid ? 0.65 : 0.5,
-                stagger: isBenefitGrid ? 0.14 : 0.1,
+                duration: isBenefitGrid || isOfferGrid ? 0.65 : 0.5,
+                stagger: isBenefitGrid || isOfferGrid ? 0.14 : 0.1,
                 ease: "power3.out",
                 scrollTrigger: {
                   trigger: element,
