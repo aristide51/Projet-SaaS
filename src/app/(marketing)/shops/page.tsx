@@ -6,7 +6,7 @@ import {
   searchPublicShops,
   type ShopDirectoryFilters,
 } from "@/features/storefront/data";
-import { MarketingSecondaryNav } from "@/components/marketing-secondary-nav";
+import { MarketingHeader } from "@/components/design/marketing-header";
 import { absoluteSiteUrl } from "@/lib/site-url";
 
 type DirectorySearchParams = {
@@ -103,9 +103,9 @@ export default async function ShopDirectoryPage({
   };
 
   return (
-    <main className="directory-page min-h-screen px-4 py-10 sm:px-6 lg:py-16">
-      <MarketingSecondaryNav currentPath="/shops" />
-      <div className="mx-auto max-w-6xl">
+    <main className="marketing-home directory-page min-h-screen">
+      <MarketingHeader currentPath="/shops" />
+      <div className="directory-content mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
         <nav aria-label="Fil d’Ariane" className="mb-8 text-sm text-slate-600">
           <Link className="underline underline-offset-4" href="/">
             Accueil
@@ -114,11 +114,11 @@ export default async function ShopDirectoryPage({
           <span>Annuaire</span>
         </nav>
 
-        <header className="mb-8 max-w-3xl">
-          <p className="mb-2 text-sm font-semibold tracking-wide text-blue-700 uppercase">
+        <header className="directory-intro mb-8 max-w-3xl">
+          <p className="directory-kicker mb-2 text-sm font-semibold tracking-wide uppercase">
             Commerces du Burkina Faso
           </p>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          <h1 className="font-bold tracking-tight">
             Trouve une boutique près de chez toi
           </h1>
           <p className="mt-3 text-slate-600">

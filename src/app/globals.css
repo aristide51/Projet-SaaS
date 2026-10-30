@@ -10850,22 +10850,30 @@ textarea:focus-visible,
 }
 
 .directory-page {
-  background: var(--color-canvas);
-  color: var(--color-ink);
+  --marketing-forest: #087a3a;
+  --marketing-forest-dark: #033b20;
+  --marketing-red: #e10b18;
+  --marketing-yellow: #ffe500;
+  --marketing-paper: #f5f6f1;
+  --marketing-ink: #17211c;
+  --marketing-muted: #637168;
+
+  background: var(--marketing-paper);
+  color: var(--marketing-ink);
 }
 
 .directory-page .text-blue-700,
 .directory-page .text-blue-800 {
-  color: var(--color-primary);
+  color: var(--marketing-forest);
 }
 
 .directory-page .text-slate-600,
 .directory-page .text-slate-500 {
-  color: var(--color-muted);
+  color: var(--marketing-muted);
 }
 
 .directory-page .text-slate-900 {
-  color: var(--color-ink);
+  color: var(--marketing-ink);
 }
 
 .directory-page .bg-slate-100 {
@@ -10910,13 +10918,14 @@ textarea:focus-visible,
 }
 
 .directory-page input[type="checkbox"] {
-  accent-color: var(--color-primary);
+  accent-color: var(--marketing-forest);
 }
 
 .directory-page button[type="submit"] {
   border: 0;
   border-radius: var(--radius-pill);
-  background: var(--color-primary);
+  background: var(--marketing-red);
+  color: #fff;
   transition:
     background-color var(--duration-fast) var(--ease-standard),
     transform var(--duration-fast) var(--ease-standard);
@@ -10924,7 +10933,7 @@ textarea:focus-visible,
 
 .directory-page button[type="submit"]:hover {
   transform: translateY(-1px);
-  background: #075d37;
+  background: #b50013;
 }
 
 .directory-page ul a {
@@ -10942,8 +10951,45 @@ textarea:focus-visible,
 
 .directory-page ul a:hover {
   transform: translateY(-3px);
-  border-color: var(--color-primary);
+  border-color: var(--marketing-forest);
   box-shadow: var(--shadow-floating);
+}
+
+.directory-intro h1 {
+  max-width: 46rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 5vw, 4.1rem);
+  letter-spacing: -0.065em;
+  line-height: 1.05;
+}
+
+.directory-kicker {
+  color: var(--marketing-forest);
+}
+
+.directory-intro > p:last-child {
+  max-width: 42rem;
+  font-size: clamp(1rem, 1.5vw, 1.15rem);
+  line-height: 1.65;
+}
+
+.directory-page form {
+  padding: clamp(1rem, 3vw, 1.5rem);
+}
+
+.directory-page input:not([type="checkbox"]),
+.directory-page select {
+  min-height: 2.9rem;
+}
+
+@media (max-width: 640px) {
+  .directory-content {
+    padding-top: 1.5rem;
+  }
+
+  .directory-intro h1 {
+    font-size: clamp(2.25rem, 11vw, 3rem);
+  }
 }
 
 .directory-page [role="alert"] {

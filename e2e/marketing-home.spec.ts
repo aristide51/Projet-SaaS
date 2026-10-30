@@ -116,6 +116,38 @@ test("l’aperçu s’adapte aux métiers et le menu mobile reste utilisable", a
   );
 });
 
+test("l’annuaire reprend l’en-tête et la palette de l’accueil", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto("/shops");
+
+  const header = page.locator(".marketing-header");
+  await expect(header).toBeVisible();
+  await expect(
+    header.getByRole("link", { name: "Annuaire", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(page.locator(".marketing-utility-bar")).toHaveCSS(
+    "background-color",
+    "rgb(225, 11, 24)",
+  );
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCSS(
+    "font-family",
+    /Unbounded/i,
+  );
+
+  const menu = header.locator(".marketing-mobile-menu");
+  await menu.locator("summary").click();
+  await expect(menu.getByRole("navigation")).toBeVisible();
+  await expect(menu.getByRole("link", { name: "Tarifs" })).toHaveAttribute(
+    "href",
+    "/#offres",
+  );
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(360);
+});
+
 test("l’illustration 3D laisse place au repli sur appareil modeste", async ({
   page,
 }) => {

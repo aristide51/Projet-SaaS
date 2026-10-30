@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { MarketingHeader } from "@/components/design/marketing-header";
 import { MarketingHeroCarousel } from "@/components/design/marketing-hero-carousel";
 import { MarketingMotion } from "@/components/design/marketing-motion";
 import { PricingOfferCards } from "@/components/design/pricing-offer-cards";
@@ -100,58 +101,7 @@ export default async function HomePage() {
       <a className="marketing-skip-link" href="#hero-title">
         Aller au contenu principal
       </a>
-      <header className="marketing-header">
-        <div className="marketing-utility-bar">
-          <p>Le numérique au service des commerces du Burkina.</p>
-          <div className="marketing-utility-bar__meta">
-            <span>Tarifs en FCFA</span>
-            <span aria-hidden="true">·</span>
-            <span>Mobile Money</span>
-          </div>
-        </div>
-        <div className="marketing-header__main">
-          <Link className="marketing-brand" href="/">
-            <span aria-hidden="true" className="marketing-brand__mark">
-              F
-            </span>
-            <span>Faso Studio</span>
-          </Link>
-          <nav aria-label="Navigation principale" className="marketing-nav">
-            <a href="#solutions">Solutions</a>
-            <a href="#fonctionnement">Comment ça marche</a>
-            <a href="#offres">Tarifs</a>
-            <Link href="/shops">Annuaire</Link>
-          </nav>
-          <div className="marketing-header__actions">
-            <Link className="marketing-login" href="/auth/login">
-              Connexion
-            </Link>
-            <Link
-              className="marketing-button marketing-button--small"
-              href="/auth/signup"
-            >
-              Créer ma boutique
-            </Link>
-          </div>
-          <details className="marketing-mobile-menu">
-            <summary aria-label="Ouvrir le menu de navigation">
-              <span aria-hidden="true" />
-              <span aria-hidden="true" />
-              <span className="marketing-mobile-menu__label">Menu</span>
-            </summary>
-            <nav aria-label="Navigation mobile">
-              <a href="#solutions">Solutions</a>
-              <a href="#fonctionnement">Comment ça marche</a>
-              <a href="#offres">Tarifs</a>
-              <Link href="/shops">Annuaire</Link>
-              <Link href="/auth/login">Connexion</Link>
-              <Link className="marketing-button" href="/auth/signup">
-                Créer ma boutique
-              </Link>
-            </nav>
-          </details>
-        </div>
-      </header>
+      <MarketingHeader currentPath="/" />
 
       <MarketingMotion>
         <MarketingHeroCarousel />
