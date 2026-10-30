@@ -11191,7 +11191,15 @@ textarea:focus-visible,
   color: #fff;
   box-shadow: 0 1rem 2.5rem rgb(20 25 45 / 14%);
   transform-origin: center;
-  transition: box-shadow 240ms ease;
+  transition:
+    box-shadow 240ms ease,
+    transform 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.pricing-offer-card-motion:hover .pricing-offer-card,
+.pricing-offer-card-motion:focus-within .pricing-offer-card {
+  transform: scale(1.05);
+  box-shadow: 0 1.25rem 3rem rgb(20 25 45 / 22%);
 }
 
 .pricing-offer-card::after {
@@ -11377,5 +11385,10 @@ textarea:focus-visible,
   .pricing-offer-card,
   .pricing-offer-card__cta {
     transition: none;
+  }
+
+  .pricing-offer-card-motion:hover .pricing-offer-card,
+  .pricing-offer-card-motion:focus-within .pricing-offer-card {
+    transform: none;
   }
 }

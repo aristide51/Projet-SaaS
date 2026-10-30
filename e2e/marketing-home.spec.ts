@@ -204,5 +204,40 @@ test("les cartes Framer Motion s’animent quand le mouvement est autorisé", as
     await offerCard.scrollIntoViewIfNeeded();
     await offerCard.hover();
     await expect(offerCard).toHaveCSS("transform", /matrix/);
+    await expect(offerCard.locator(".pricing-offer-card__art")).toHaveCSS(
+      "transform",
+      /matrix/,
+    );
+    await expect(offerCard.locator(".pricing-offer-card__amount")).toHaveCSS(
+      "transform",
+      /matrix/,
+    );
+  }
+});
+
+test("les cartes des offres restent animées sans JavaScript", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    javaScriptEnabled: false,
+    reducedMotion: "no-preference",
+  });
+
+  try {
+    const page = await context.newPage();
+    await page.goto("/");
+
+    const card = page.locator(".pricing-offer-card").first();
+    const initialBounds = await card.boundingBox();
+    if (!initialBounds) {
+      throw new Error("La première carte d’offre n’est pas visible.");
+    }
+
+    await card.hover();
+    await expect
+      .poll(async () => (await card.boundingBox())?.width ?? initialBounds.width)
+      .toBeGreaterThan(initialBounds.width * 1.03);
+  } finally {
+    await context.close();
   }
 });
