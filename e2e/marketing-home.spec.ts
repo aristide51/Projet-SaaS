@@ -125,8 +125,8 @@ test("l’annuaire reprend l’en-tête et la palette de l’accueil", async ({
   const header = page.locator(".marketing-header");
   await expect(header).toBeVisible();
   await expect(
-    header.getByRole("link", { name: "Annuaire", exact: true }),
-  ).toHaveAttribute("aria-current", "page");
+    header.locator(".marketing-nav a[aria-current='page']"),
+  ).toHaveText("Annuaire");
   await expect(page.locator(".marketing-utility-bar")).toHaveCSS(
     "background-color",
     "rgb(225, 11, 24)",
@@ -230,9 +230,10 @@ test("les cartes Framer Motion des offres s’animent quand le mouvement est aut
   await expect(offerCard).toBeVisible();
   await offerCard.scrollIntoViewIfNeeded();
   await offerCard.hover();
-  await expect(
-    offerCard.locator(".."),
-  ).toHaveCSS("transform", /matrix\(1\.05,/);
+  await expect(offerCard.locator("..")).toHaveCSS(
+    "transform",
+    /matrix\(1\.05,/,
+  );
   await expect(offerCard.locator(".pricing-offer-card__art")).toHaveCSS(
     "transform",
     /matrix/,
@@ -269,7 +270,9 @@ test("les cartes des offres restent animées sans JavaScript", async ({
 
     await card.hover();
     await expect
-      .poll(async () => (await card.boundingBox())?.width ?? initialBounds.width)
+      .poll(
+        async () => (await card.boundingBox())?.width ?? initialBounds.width,
+      )
       .toBeGreaterThan(initialBounds.width * 1.03);
     await expect
       .poll(
