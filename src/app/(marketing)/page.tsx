@@ -24,30 +24,29 @@ const steps = [
   },
   {
     number: "02",
-    title: "Ajoutez votre offre",
-    description: "Ajoutez vos produits ou services.",
+    title: "Ajoutez vos offres",
+    description: "Produits, services ou rendez-vous.",
   },
   {
     number: "03",
     title: "Recevez vos clients",
-    description: "Suivez commandes et rendez-vous.",
+    description: "Commandes et réservations, réunies.",
   },
 ];
 
 const faqs = [
   {
     question: "Faut-il savoir créer un site web ?",
-    answer: "Non, créez votre boutique sans écrire de code.",
+    answer: "Non. Créez votre boutique sans écrire de code.",
   },
   {
-    question: "Quels appareils et quelle connexion sont nécessaires ?",
-    answer:
-      "Un téléphone récent (Android 13 ou plus récent, iPhone sous iOS 16 ou plus récent) et une connexion 4G stable ou un Wi-Fi rapide. Une vérification automatique contrôle les capacités disponibles.",
+    question: "Quels appareils et quelle connexion ?",
+    answer: "Android 13 ou iOS 16+, avec une connexion 4G ou Wi-Fi stable.",
   },
   {
-    question: "Comment les clients peuvent-ils payer ?",
+    question: "Comment se passe un paiement ?",
     answer:
-      "Les paiements Mobile Money sont déclarés par le client puis vérifiés par le commerçant.",
+      "Le client déclare son paiement Mobile Money, puis vous le confirmez.",
   },
 ];
 
@@ -103,7 +102,7 @@ export default async function HomePage() {
       </a>
       <header className="marketing-header">
         <div className="marketing-utility-bar">
-          <p>La plateforme numérique des commerces du Burkina Faso</p>
+          <p>Le numérique au service des commerces du Burkina.</p>
           <div className="marketing-utility-bar__meta">
             <span>Tarifs en FCFA</span>
             <span aria-hidden="true">·</span>
@@ -158,27 +157,15 @@ export default async function HomePage() {
         <MarketingHeroCarousel />
 
         <section
-          aria-label="Pour les commerces locaux"
-          className="marketing-ribbon"
-        >
-          <span>Une vitrine toujours ouverte</span>
-          <i aria-hidden="true" />
-          <span>Des commandes mieux suivies</span>
-          <i aria-hidden="true" />
-          <span>Le commerce d’ici, partout</span>
-        </section>
-
-        <section
           aria-labelledby="benefits-title"
           className="marketing-section marketing-benefits"
           id="solutions"
         >
           <div className="marketing-section__heading" data-reveal>
-            <p className="marketing-kicker">Une seule plateforme</p>
             <h2 id="benefits-title">
-              Tout votre commerce.
+              Gérez tout
               <br />
-              <span>Au même endroit.</span>
+              <span>au même endroit.</span>
             </h2>
           </div>
           <div className="benefit-grid" data-stagger="benefits">
@@ -186,12 +173,11 @@ export default async function HomePage() {
               <article className="benefit-card" id="vitrine">
                 <p className="benefit-card__number">
                   <span>01</span>
-                  <span>VOTRE VITRINE</span>
                 </p>
-                <h3>Votre vitrine en ligne</h3>
-                <p>Produits et services, réunis.</p>
+                <h3>Votre vitrine</h3>
+                <p>Présentez vos produits et services.</p>
                 <a href="#fonctionnement">
-                  Découvrir la vitrine <span aria-hidden="true">→</span>
+                  Voir la vitrine <span aria-hidden="true">→</span>
                 </a>
               </article>
             </MotionSurface>
@@ -199,12 +185,11 @@ export default async function HomePage() {
               <article className="benefit-card" id="rendez-vous">
                 <p className="benefit-card__number">
                   <span>02</span>
-                  <span>VOTRE AGENDA</span>
                 </p>
-                <h3>Les rendez-vous, simplement</h3>
-                <p>Créneaux et réservations réunis.</p>
+                <h3>Vos rendez-vous</h3>
+                <p>Laissez vos clients réserver en ligne.</p>
                 <a href="#fonctionnement">
-                  Découvrir l’agenda <span aria-hidden="true">→</span>
+                  Voir l’agenda <span aria-hidden="true">→</span>
                 </a>
               </article>
             </MotionSurface>
@@ -212,10 +197,9 @@ export default async function HomePage() {
               <article className="benefit-card" id="commandes">
                 <p className="benefit-card__number">
                   <span>03</span>
-                  <span>VOS COMMANDES</span>
                 </p>
-                <h3>Les demandes, bien suivies</h3>
-                <p>Commandes et demandes, au même endroit.</p>
+                <h3>Vos commandes</h3>
+                <p>Gardez le fil de chaque demande.</p>
                 <a href="#offres">
                   Voir les offres <span aria-hidden="true">→</span>
                 </a>
@@ -230,11 +214,7 @@ export default async function HomePage() {
           id="fonctionnement"
         >
           <div className="marketing-steps__intro" data-reveal>
-            <p className="marketing-kicker">Prêt quand vous l’êtes</p>
-            <h2 id="steps-title">
-              De votre idée
-              <br />à votre boutique.
-            </h2>
+            <h2 id="steps-title">En trois étapes.</h2>
             <Link
               className="marketing-button marketing-button--light"
               href="/auth/signup"
@@ -269,9 +249,7 @@ export default async function HomePage() {
           id="offres"
         >
           <div className="marketing-section__heading" data-reveal>
-            <p className="marketing-kicker">Des offres lisibles</p>
-            <h2 id="plans-title">Choisissez votre offre.</h2>
-            <p>Des tarifs mensuels clairs, adaptés à votre activité.</p>
+            <h2 id="plans-title">Des offres simples.</h2>
           </div>
           {!isSupabaseConfigured ? (
             <p className="plan-note" role="status">
@@ -332,28 +310,27 @@ export default async function HomePage() {
 
         <section aria-labelledby="trust-title" className="marketing-trust">
           <div data-reveal>
-            <p className="marketing-kicker">Pensé pour les commerces d’ici</p>
             <h2 id="trust-title">
-              Simple, même sur <span>téléphone.</span>
+              Simple sur <span>mobile.</span>
             </h2>
           </div>
           <div className="trust-points" data-stagger>
             <article>
               <span aria-hidden="true">◎</span>
               <div>
-                <h3>Clair à utiliser</h3>
+                <h3>Simple à utiliser</h3>
               </div>
             </article>
             <article>
               <span aria-hidden="true">⌁</span>
               <div>
-                <h3>Paiement Mobile Money</h3>
+                <h3>Mobile Money</h3>
               </div>
             </article>
             <article>
               <span aria-hidden="true">◇</span>
               <div>
-                <h3>Vos données, votre activité</h3>
+                <h3>Vos données restent les vôtres.</h3>
               </div>
             </article>
           </div>
@@ -364,8 +341,7 @@ export default async function HomePage() {
           className="marketing-section marketing-faq"
         >
           <div className="marketing-section__heading" data-reveal>
-            <p className="marketing-kicker">FAQ</p>
-            <h2 id="faq-title">Une question ?</h2>
+            <h2 id="faq-title">Questions fréquentes.</h2>
           </div>
           <div className="faq-list" data-stagger>
             {faqs.map((faq) => (
@@ -382,15 +358,10 @@ export default async function HomePage() {
 
         <section className="marketing-final-cta">
           <div data-reveal>
-            <p className="marketing-kicker">À vous de jouer</p>
-            <h2>Ouvrez votre boutique.</h2>
-            <p>Votre commerce en ligne peut commencer aujourd’hui.</p>
+            <h2>Prêt à vous lancer ?</h2>
             <div className="marketing-hero__actions">
               <Link className="marketing-button" href="/auth/signup">
                 Créer ma boutique <span aria-hidden="true">→</span>
-              </Link>
-              <Link className="marketing-text-link" href="/shops">
-                Voir l’annuaire
               </Link>
             </div>
           </div>
