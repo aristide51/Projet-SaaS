@@ -106,7 +106,7 @@ export default async function ShopDirectoryPage({
     <main className="marketing-home directory-page min-h-screen">
       <MarketingHeader currentPath="/shops" />
       <div className="directory-content mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
-        <nav aria-label="Fil d’Ariane" className="mb-8 text-sm text-slate-600">
+        <nav aria-label="Fil d’Ariane" className="directory-breadcrumb">
           <Link className="underline underline-offset-4" href="/">
             Accueil
           </Link>
@@ -114,146 +114,140 @@ export default async function ShopDirectoryPage({
           <span>Annuaire</span>
         </nav>
 
-        <header className="directory-intro mb-8 max-w-3xl">
-          <p className="auth-eyebrow directory-kicker mb-2 text-sm font-semibold tracking-wide uppercase">
-            Commerces du Burkina Faso
-          </p>
-          <h1 className="font-bold tracking-tight">
-            Trouve une boutique près de chez toi
-          </h1>
-          <p className="mt-3 text-slate-600">
-            Recherche les commerces, leurs produits et leurs services à
-            Ouagadougou, Bobo-Dioulasso et ailleurs.
+        <header className="directory-intro">
+          <p className="directory-kicker">L’annuaire des commerces locaux</p>
+          <h1>Trouve une boutique près de chez toi.</h1>
+          <p>
+            Explore les boutiques, produits et services de Ouagadougou,
+            Bobo-Dioulasso et de tout le Burkina Faso.
           </p>
         </header>
 
-        <form
-          action="/shops"
-          className="mb-8 grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4"
-          method="get"
-        >
-          <label className="grid gap-1 text-sm font-medium sm:col-span-2">
-            Recherche
-            <input
-              className="min-h-11 rounded-lg border border-slate-300 px-3 font-normal"
-              defaultValue={firstValue(search.q)}
-              maxLength={100}
-              name="q"
-              placeholder="Nom de boutique"
-              type="search"
-            />
-          </label>
-          <label className="grid gap-1 text-sm font-medium">
-            Ville
-            <input
-              className="min-h-11 rounded-lg border border-slate-300 px-3 font-normal"
-              defaultValue={firstValue(search.ville)}
-              list="burkina-cities"
-              maxLength={80}
-              name="ville"
-              placeholder="Ex. Ouagadougou"
-            />
-            <datalist id="burkina-cities">
-              <option value="Ouagadougou" />
-              <option value="Bobo-Dioulasso" />
-            </datalist>
-          </label>
-          <label className="grid gap-1 text-sm font-medium">
-            Quartier
-            <input
-              className="min-h-11 rounded-lg border border-slate-300 px-3 font-normal"
-              defaultValue={firstValue(search.quartier)}
-              list="burkina-neighborhoods"
-              maxLength={80}
-              name="quartier"
-              placeholder="Tous les quartiers"
-            />
-            <datalist id="burkina-neighborhoods">
-              {NEIGHBORHOODS.map((neighborhood) => (
-                <option key={neighborhood} value={neighborhood} />
-              ))}
-            </datalist>
-          </label>
-          <label className="grid gap-1 text-sm font-medium">
-            Catégorie
-            <select
-              className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 font-normal"
-              defaultValue={firstValue(search.categorie)}
-              name="categorie"
-            >
-              <option value="">Toutes les catégories</option>
-              {Object.entries(CATEGORIES).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm font-medium">
-            Note minimale
-            <select
-              className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 font-normal"
-              defaultValue={firstValue(search.note)}
-              name="note"
-            >
-              <option value="">Toutes les notes</option>
-              <option value="3">3 étoiles</option>
-              <option value="4">4 étoiles</option>
-              <option value="4.5">4,5 étoiles</option>
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm font-medium">
-            Trier par
-            <select
-              className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 font-normal"
-              defaultValue={firstValue(search.tri) || "relevance"}
-              name="tri"
-            >
-              <option value="relevance">Pertinence</option>
-              <option value="distance">Proximité</option>
-              <option value="rating">Meilleures notes</option>
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm font-medium">
-            Proximité depuis
-            <select
-              className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 font-normal"
-              defaultValue={firstValue(search.centre) || "Ouagadougou"}
-              name="centre"
-            >
-              {Object.keys(CENTERS).map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="flex flex-col gap-3 self-end pb-2 sm:col-span-2 lg:flex-row">
-            <label className="flex min-h-11 items-center gap-2 text-sm">
+        <form action="/shops" className="directory-search-panel" method="get">
+          <div className="directory-search-primary">
+            <label className="directory-field directory-field--query">
+              <span>Que recherches-tu ?</span>
               <input
-                defaultChecked={firstValue(search.ouvert) === "1"}
-                name="ouvert"
-                type="checkbox"
-                value="1"
+                defaultValue={firstValue(search.q)}
+                maxLength={100}
+                name="q"
+                placeholder="Nom d’une boutique"
+                type="search"
               />
-              Ouvert maintenant
             </label>
-            <label className="flex min-h-11 items-center gap-2 text-sm">
+            <label className="directory-field directory-field--city">
+              <span>Dans quelle ville ?</span>
               <input
-                defaultChecked={firstValue(search.promo) === "1"}
-                name="promo"
-                type="checkbox"
-                value="1"
+                defaultValue={firstValue(search.ville)}
+                list="burkina-cities"
+                maxLength={80}
+                name="ville"
+                placeholder="Ex. Ouagadougou"
               />
-              En promotion
+              <datalist id="burkina-cities">
+                <option value="Ouagadougou" />
+                <option value="Bobo-Dioulasso" />
+              </datalist>
+            </label>
+            <button className="directory-search-button" type="submit">
+              Rechercher <span aria-hidden="true">→</span>
+            </button>
+          </div>
+
+          <div aria-hidden="true" className="directory-search-divider" />
+          <div className="directory-filter-heading">
+            <div>
+              <p>Affiner la recherche</p>
+              <span>Choisis les critères qui comptent pour toi.</span>
+            </div>
+          </div>
+          <div className="directory-filter-grid">
+            <label className="directory-field">
+              <span>Quartier</span>
+              <input
+                defaultValue={firstValue(search.quartier)}
+                list="burkina-neighborhoods"
+                maxLength={80}
+                name="quartier"
+                placeholder="Tous les quartiers"
+              />
+              <datalist id="burkina-neighborhoods">
+                {NEIGHBORHOODS.map((neighborhood) => (
+                  <option key={neighborhood} value={neighborhood} />
+                ))}
+              </datalist>
+            </label>
+            <label className="directory-field">
+              <span>Catégorie</span>
+              <select
+                defaultValue={firstValue(search.categorie)}
+                name="categorie"
+              >
+                <option value="">Toutes les catégories</option>
+                {Object.entries(CATEGORIES).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="directory-field">
+              <span>Note minimale</span>
+              <select defaultValue={firstValue(search.note)} name="note">
+                <option value="">Toutes les notes</option>
+                <option value="3">3 étoiles</option>
+                <option value="4">4 étoiles</option>
+                <option value="4.5">4,5 étoiles</option>
+              </select>
+            </label>
+            <label className="directory-field">
+              <span>Trier par</span>
+              <select
+                defaultValue={firstValue(search.tri) || "relevance"}
+                name="tri"
+              >
+                <option value="relevance">Pertinence</option>
+                <option value="distance">Proximité</option>
+                <option value="rating">Meilleures notes</option>
+              </select>
+            </label>
+            <label className="directory-field">
+              <span>Proximité depuis</span>
+              <select
+                defaultValue={firstValue(search.centre) || "Ouagadougou"}
+                name="centre"
+              >
+                {Object.keys(CENTERS).map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
-          <button
-            className="min-h-11 rounded-lg px-5 font-semibold text-white lg:col-start-4"
-            type="submit"
-          >
-            Rechercher
-          </button>
+          <div className="directory-filter-footer">
+            <div className="directory-filter-options">
+              <label>
+                <input
+                  defaultChecked={firstValue(search.ouvert) === "1"}
+                  name="ouvert"
+                  type="checkbox"
+                  value="1"
+                />
+                <span>Ouvert maintenant</span>
+              </label>
+              <label>
+                <input
+                  defaultChecked={firstValue(search.promo) === "1"}
+                  name="promo"
+                  type="checkbox"
+                  value="1"
+                />
+                <span>En promotion</span>
+              </label>
+            </div>
+            <p>Tous les commerces sont situés au Burkina Faso.</p>
+          </div>
         </form>
 
         {parsed.error ? (
@@ -266,15 +260,13 @@ export default async function ShopDirectoryPage({
         ) : null}
 
         <section aria-labelledby="directory-results-heading">
-          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-            <h2
-              className="text-xl font-semibold"
-              id="directory-results-heading"
-            >
-              Boutiques
-            </h2>
-            <p aria-live="polite" className="text-sm text-slate-600">
-              {visibleShops.length} résultat(s) sur cette page
+          <div className="directory-results-heading">
+            <div>
+              <p className="directory-kicker">Sélection locale</p>
+              <h2 id="directory-results-heading">Les boutiques à découvrir</h2>
+            </div>
+            <p aria-live="polite" className="directory-results-count">
+              <strong>{visibleShops.length}</strong> résultat(s) sur cette page
             </p>
           </div>
 
@@ -293,10 +285,10 @@ export default async function ShopDirectoryPage({
                 {visibleShops.map((shop) => (
                   <li key={shop.shop_id}>
                     <Link
-                      className="flex h-full gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+                      className="directory-shop-card"
                       href={`/${encodeURIComponent(shop.slug)}`}
                     >
-                      <div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-100 text-lg font-bold text-slate-500">
+                      <div className="directory-shop-card__logo">
                         {shop.logo_path ? (
                           <Image
                             alt=""
@@ -310,57 +302,52 @@ export default async function ShopDirectoryPage({
                           shop.name.slice(0, 1).toLocaleUpperCase("fr")
                         )}
                       </div>
-                      <div className="min-w-0">
-                        <p className="auth-eyebrow">
+                      <div className="directory-shop-card__content">
+                        <p className="directory-shop-card__category">
                           {CATEGORIES[shop.category]}
                         </p>
-                        <h3 className="mt-1 truncate text-lg font-semibold">
-                          {shop.name}
-                        </h3>
-                        <p className="mt-1 text-sm text-slate-600">
+                        <h3>{shop.name}</h3>
+                        <p className="directory-shop-card__location">
                           {[shop.district, shop.city]
                             .filter(Boolean)
                             .join(", ")}
                         </p>
-                        <p className="mt-2 text-sm">
+                        <div className="directory-shop-card__rating">
                           {shop.rating_count ? (
                             <>
                               <span aria-label={`${shop.rating_avg} sur 5`}>
                                 ★ {Number(shop.rating_avg).toFixed(1)}
                               </span>
-                              <span className="text-slate-600">
-                                {" "}
-                                ({shop.rating_count} avis)
-                              </span>
+                              <span>({shop.rating_count} avis)</span>
                             </>
                           ) : (
-                            <span className="text-slate-600">
-                              Pas encore d’avis
-                            </span>
+                            <span>Pas encore d’avis</span>
                           )}
+                        </div>
+                        <div className="directory-shop-card__badges">
                           {shop.is_open_now ? (
-                            <span className="ml-2 font-medium text-green-700">
+                            <span className="directory-shop-card__badge directory-shop-card__badge--open">
                               Ouvert
                             </span>
                           ) : null}
                           {shop.has_promotion ? (
-                            <span className="ml-2 font-medium text-orange-700">
-                              Promo
+                            <span className="directory-shop-card__badge directory-shop-card__badge--promo">
+                              En promotion
                             </span>
                           ) : null}
-                        </p>
-                        {shop.distance_km !== null ? (
-                          <p className="mt-1 text-sm text-slate-600">
-                            À {Number(shop.distance_km).toFixed(1)} km
-                          </p>
-                        ) : null}
+                          {shop.distance_km !== null ? (
+                            <span className="directory-shop-card__distance">
+                              À {Number(shop.distance_km).toFixed(1)} km
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                     </Link>
                   </li>
                 ))}
               </ul>
               {nextHref ? (
-                <div className="mt-8 text-center">
+                <div className="directory-load-more">
                   <Link
                     className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-6 font-semibold hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
                     href={nextHref}
