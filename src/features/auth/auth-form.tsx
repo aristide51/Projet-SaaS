@@ -187,12 +187,62 @@ export function AuthForm({ mode, siteKey, nonce, next }: AuthFormProps) {
   const hasEmail = ["login", "signup", "magic", "forgot"].includes(mode);
 
   return (
-    <section aria-labelledby="auth-title" className="auth-card">
-      <p className="auth-eyebrow">Faso · commerces locaux</p>
-      <h1 id="auth-title">{content.title}</h1>
-      <p className="auth-description">{content.description}</p>
+    <section
+      aria-labelledby="auth-title"
+      className={`auth-card auth-card--${mode}`}
+    >
+      {mode === "login" ? (
+        <div className="auth-brand">
+          <span aria-hidden="true" className="auth-brand__mark">
+            F
+          </span>
+          <span className="auth-brand__name">Faso Studio</span>
+        </div>
+      ) : (
+        <p className="auth-eyebrow">Faso · commerces locaux</p>
+      )}
+      <div
+        className={
+          mode === "login"
+            ? "auth-card__heading auth-card__heading--login"
+            : undefined
+        }
+      >
+        <h1 id="auth-title">{content.title}</h1>
+        <p className="auth-description">{content.description}</p>
+      </div>
 
-      <form className="auth-form" noValidate onSubmit={handleSubmit(submit)}>
+      <form
+        className={
+          mode === "login" ? "auth-form auth-form--login" : "auth-form"
+        }
+        noValidate
+        onSubmit={handleSubmit(submit)}
+      >
+        {mode === "login" ? (
+          <>
+            <button
+              className="ui-button ui-button--secondary ui-button--lg auth-form__provider"
+              disabled={isPending || !siteKey}
+              onClick={continueWithGoogle}
+              type="button"
+            >
+              <span aria-hidden="true" className="auth-form__provider-mark">
+                G
+              </span>
+              Continuer avec Google
+            </button>
+            <div
+              aria-label="Continuer avec une adresse e-mail"
+              aria-orientation="horizontal"
+              className="auth-form__divider"
+              role="separator"
+            >
+              <span>ou continuer par e-mail</span>
+            </div>
+          </>
+        ) : null}
+
         {mode === "signup" ? (
           <FormField
             {...(errors.fullName?.message
@@ -229,6 +279,16 @@ export function AuthForm({ mode, siteKey, nonce, next }: AuthFormProps) {
               ? { error: errors.password.message }
               : {})}
             label={mode === "reset" ? "Nouveau mot de passe" : "Mot de passe"}
+            labelAction={
+              mode === "login" ? (
+                <Link
+                  className="auth-form__forgot-link"
+                  href={withNext("/auth/forgot-password", next)}
+                >
+                  Mot de passe oublié ?
+                </Link>
+              ) : undefined
+            }
           >
             <Input
               autoComplete={
@@ -269,22 +329,12 @@ export function AuthForm({ mode, siteKey, nonce, next }: AuthFormProps) {
         </button>
 
         {mode === "login" ? (
-          <>
-            <button
-              className="ui-button ui-button--secondary ui-button--lg auth-form__submit"
-              disabled={isPending || !siteKey}
-              onClick={continueWithGoogle}
-              type="button"
-            >
-              Continuer avec Google
-            </button>
-            <Link
-              className="auth-link"
-              href={withNext("/auth/magic-link", next)}
-            >
-              Recevoir un lien de connexion
-            </Link>
-          </>
+          <Link
+            className="auth-link auth-form__magic-link"
+            href={withNext("/auth/magic-link", next)}
+          >
+            Recevoir un lien de connexion
+          </Link>
         ) : null}
 
         <ResultMessage result={result} />
@@ -316,14 +366,17 @@ function withNext(path: string, next: string) {
 
 function AuthLinks({ mode, next }: { mode: AuthMode; next: string }) {
   return (
-    <nav aria-label="Liens d’authentification" className="auth-links">
+    <nav
+      aria-label="Liens d’authentification"
+      className={
+        mode === "login" ? "auth-links auth-links--login" : "auth-links"
+      }
+    >
       {mode === "login" ? (
-        <>
-          <Link href={withNext("/auth/forgot-password", next)}>
-            Mot de passe oublié ?
-          </Link>
+        <p className="auth-links__signup">
+          <span>Nouveau ici ?</span>
           <Link href="/auth/signup">Créer un compte</Link>
-        </>
+        </p>
       ) : null}
       {mode === "signup" ? (
         <Link href={withNext("/auth/login", next)}>
