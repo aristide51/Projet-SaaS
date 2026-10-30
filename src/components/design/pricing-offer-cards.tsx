@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { m, useReducedMotion } from "framer-motion";
-import { useState } from "react";
+import { m, useReducedMotion, type Variants } from "framer-motion";
+import { useState, useSyncExternalStore } from "react";
 
 type PricingOffer = Readonly<{
   code: string;
@@ -19,22 +19,53 @@ type ArtworkVariant = 0 | 1 | 2;
 
 const cardBackgrounds = ["#4f46e5", "#9333ea", "#be185d"] as const;
 const cardTransition = { duration: 1, ease: "backInOut" } as const;
-const cardVariants = {
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (index: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.55,
+      delay: Math.min(index * 0.12, 0.36),
+      ease: "easeOut",
+    },
+  }),
+  reducedVisible: (index: number) => ({
+    opacity: 1,
+    transition: {
+      duration: 0.2,
+      delay: Math.min(index * 0.06, 0.18),
+      ease: "linear",
+    },
+  }),
+  reducedHover: {
+    filter: "brightness(1.08)",
+    transition: { duration: 0.18 },
+  },
   hover: { scale: 1.05, zIndex: 2, transition: cardTransition },
 };
 const priceVariants = {
   rest: { scale: 0.85 },
   hover: { scale: 1 },
 };
+const subscribeToHydration = () => () => {};
+const getHydrationSnapshot = () => true;
+const getServerHydrationSnapshot = () => false;
 
 export function PricingOfferCards({
   offers,
 }: Readonly<{ offers: PricingOffer[] }>) {
   const prefersReducedMotion = useReducedMotion();
+  const motionReady = useSyncExternalStore(
+    subscribeToHydration,
+    getHydrationSnapshot,
+    getServerHydrationSnapshot,
+  );
   const [hoveredOffer, setHoveredOffer] = useState<string | null>(null);
 
   return (
-    <div className="pricing-offer-grid" data-stagger="offers">
+    <div className="pricing-offer-grid">
       {offers.map((offer, index) => (
         <div className="pricing-offer-card-motion" key={offer.code}>
           <m.article
@@ -43,11 +74,17 @@ export function PricingOfferCards({
             style={{
               backgroundColor: cardBackgrounds[index % cardBackgrounds.length],
             }}
+            initial={false}
+            animate={motionReady && !prefersReducedMotion ? "hidden" : false}
+            whileInView={prefersReducedMotion ? "reducedVisible" : "visible"}
+            viewport={{ once: true, amount: 0.25 }}
+            whileHover={prefersReducedMotion ? "reducedHover" : "hover"}
+            whileTap={prefersReducedMotion ? "reducedHover" : { scale: 0.985 }}
+            custom={index}
             transition={cardTransition}
             variants={cardVariants}
             onHoverStart={() => setHoveredOffer(offer.code)}
             onHoverEnd={() => setHoveredOffer(null)}
-            {...(prefersReducedMotion ? {} : { whileHover: "hover" })}
           >
             <PricingOfferArtwork variant={(index % 3) as ArtworkVariant} />
             <div className="pricing-offer-card__body">
