@@ -10854,6 +10854,16 @@ textarea:focus-visible,
   color: var(--color-ink);
 }
 
+.directory-page header h1 {
+  font-family: var(--font-body);
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.directory-page header > p:last-child {
+  text-wrap: pretty;
+}
+
 .directory-page .text-blue-700,
 .directory-page .text-blue-800 {
   color: var(--color-primary);

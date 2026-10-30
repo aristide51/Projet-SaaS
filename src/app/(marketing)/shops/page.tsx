@@ -114,7 +114,7 @@ export default async function ShopDirectoryPage({
           <span>Annuaire</span>
         </nav>
 
-        <header className="mb-8 max-w-3xl">
+        <header className="mb-8 max-w-5xl">
           <p className="mb-2 text-sm font-semibold tracking-wide text-blue-700 uppercase">
             Commerces du Burkina Faso
           </p>
