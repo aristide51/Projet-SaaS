@@ -20,7 +20,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#155d42",
+  themeColor: "#08782f",
 };
 
 export default async function DashboardLayout({

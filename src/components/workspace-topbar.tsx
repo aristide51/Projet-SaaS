@@ -14,7 +14,7 @@ export function WorkspaceTopbar({ section, links }: WorkspaceTopbarProps) {
         href="/"
       >
         <span aria-hidden="true" className="workspace-topbar__mark">
-          FS
+          F
         </span>
         <span className="workspace-topbar__brand-copy">
           <strong>Faso Studio</strong>

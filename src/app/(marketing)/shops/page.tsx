@@ -115,7 +115,7 @@ export default async function ShopDirectoryPage({
         </nav>
 
         <header className="directory-intro mb-8 max-w-3xl">
-          <p className="directory-kicker mb-2 text-sm font-semibold tracking-wide uppercase">
+          <p className="auth-eyebrow directory-kicker mb-2 text-sm font-semibold tracking-wide uppercase">
             Commerces du Burkina Faso
           </p>
           <h1 className="font-bold tracking-tight">
@@ -249,7 +249,7 @@ export default async function ShopDirectoryPage({
             </label>
           </div>
           <button
-            className="min-h-11 rounded-lg bg-blue-700 px-5 font-semibold text-white hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 lg:col-start-4"
+            className="min-h-11 rounded-lg px-5 font-semibold text-white lg:col-start-4"
             type="submit"
           >
             Rechercher
@@ -293,7 +293,7 @@ export default async function ShopDirectoryPage({
                 {visibleShops.map((shop) => (
                   <li key={shop.shop_id}>
                     <Link
-                      className="flex h-full gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-300 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                      className="flex h-full gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md"
                       href={`/${encodeURIComponent(shop.slug)}`}
                     >
                       <div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-100 text-lg font-bold text-slate-500">
@@ -311,7 +311,7 @@ export default async function ShopDirectoryPage({
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold tracking-wide text-blue-700 uppercase">
+                        <p className="auth-eyebrow">
                           {CATEGORIES[shop.category]}
                         </p>
                         <h3 className="mt-1 truncate text-lg font-semibold">
