@@ -232,11 +232,19 @@ test("les cartes des offres restent animées sans JavaScript", async ({
     if (!initialBounds) {
       throw new Error("La première carte d’offre n’est pas visible.");
     }
+    const price = card.locator(".pricing-offer-card__amount");
+    const initialPriceWidth = (await price.boundingBox())?.width;
+    if (initialPriceWidth === undefined) {
+      throw new Error("Le prix de l’offre n’est pas visible.");
+    }
 
     await card.hover();
     await expect
       .poll(async () => (await card.boundingBox())?.width ?? initialBounds.width)
       .toBeGreaterThan(initialBounds.width * 1.03);
+    await expect
+      .poll(async () => (await price.boundingBox())?.width ?? initialPriceWidth)
+      .toBeGreaterThan(initialPriceWidth * 1.1);
   } finally {
     await context.close();
   }
