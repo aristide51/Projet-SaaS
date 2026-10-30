@@ -19,7 +19,7 @@ export function MarketingSecondaryNav({
         href="/"
       >
         <span aria-hidden="true" className="marketing-secondary-nav__mark">
-          FS
+          F
         </span>
         <span>Faso Studio</span>
       </Link>

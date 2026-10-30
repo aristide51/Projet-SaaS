@@ -17,8 +17,7 @@ type PricingOffer = Readonly<{
 
 type ArtworkVariant = 0 | 1 | 2;
 
-const cardBackgrounds = ["#4f46e5", "#9333ea", "#be185d"] as const;
-const cardTransition = { duration: 1, ease: "backInOut" } as const;
+const cardTransition = { duration: 0.3, ease: "easeOut" } as const;
 const cardVariants: Variants = {
   hidden: { opacity: 0, y: 28, scale: 0.97 },
   visible: (index: number) => ({
@@ -31,18 +30,6 @@ const cardVariants: Variants = {
       ease: "easeOut",
     },
   }),
-  reducedVisible: (index: number) => ({
-    opacity: 1,
-    transition: {
-      duration: 0.2,
-      delay: Math.min(index * 0.06, 0.18),
-      ease: "linear",
-    },
-  }),
-  reducedHover: {
-    filter: "brightness(1.08)",
-    transition: { duration: 0.18 },
-  },
   hover: { zIndex: 2, transition: cardTransition },
 };
 const subscribeToHydration = () => () => {};
@@ -65,16 +52,17 @@ export function PricingOfferCards({
         <div className="pricing-offer-card-motion" key={offer.code}>
           <m.article
             aria-labelledby={`pricing-offer-${offer.code}`}
-            className="pricing-offer-card"
-            style={{
-              backgroundColor: cardBackgrounds[index % cardBackgrounds.length],
-            }}
+            className={`pricing-offer-card pricing-offer-card--${index % 3}`}
             initial={false}
             animate={motionReady && !prefersReducedMotion ? "hidden" : false}
-            whileInView={prefersReducedMotion ? "reducedVisible" : "visible"}
             viewport={{ once: true, amount: 0.25 }}
-            whileHover={prefersReducedMotion ? "reducedHover" : "hover"}
-            whileTap={prefersReducedMotion ? "reducedHover" : { scale: 0.985 }}
+            {...(prefersReducedMotion
+              ? {}
+              : {
+                  whileInView: "visible" as const,
+                  whileHover: "hover" as const,
+                  whileTap: { scale: 0.985 },
+                })}
             custom={index}
             transition={cardTransition}
             variants={cardVariants}
@@ -139,7 +127,7 @@ function PricingOfferArtwork({
       viewBox="0 0 320 384"
       variants={{
         hover: {
-          scale: variant === 0 ? 1.5 : variant === 1 ? 1.05 : 1.25,
+          scale: variant === 0 ? 1.12 : variant === 1 ? 1.04 : 1.08,
         },
       }}
       transition={cardTransition}
