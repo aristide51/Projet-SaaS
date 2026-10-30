@@ -163,6 +163,7 @@ export function EmptyState({ title, description, action }: EmptyStateProps) {
 
 type FormFieldProps = {
   label: string;
+  labelAction?: ReactNode;
   hint?: string;
   error?: string;
   required?: boolean;
@@ -176,6 +177,7 @@ type FormFieldProps = {
 
 export function FormField({
   label,
+  labelAction,
   hint,
   error,
   required,
@@ -194,17 +196,28 @@ export function FormField({
       })
     : children;
 
+  const fieldLabel = (
+    <label className="ui-label" htmlFor={id}>
+      {label}
+      {required ? (
+        <span aria-hidden="true" className="ui-form-field__required">
+          {" "}
+          *
+        </span>
+      ) : null}
+    </label>
+  );
+
   return (
     <div className="ui-form-field">
-      <label className="ui-label" htmlFor={id}>
-        {label}
-        {required ? (
-          <span aria-hidden="true" className="ui-form-field__required">
-            {" "}
-            *
-          </span>
-        ) : null}
-      </label>
+      {labelAction ? (
+        <div className="ui-form-field__heading">
+          {fieldLabel}
+          {labelAction}
+        </div>
+      ) : (
+        fieldLabel
+      )}
       {control}
       {hint ? (
         <p className="ui-field-hint" id={hintId}>

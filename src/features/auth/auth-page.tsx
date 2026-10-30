@@ -13,7 +13,7 @@ export async function AuthPage({
   const safeNext = getSafeRedirectPath(next);
 
   return (
-    <main className="auth-main">
+    <main className={`auth-main auth-main--${mode}`}>
       <AuthForm
         mode={mode}
         next={safeNext}
