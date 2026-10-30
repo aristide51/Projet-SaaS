@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { m, useReducedMotion, type Variants } from "framer-motion";
-import { useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 
 type PricingOffer = Readonly<{
   code: string;
@@ -43,11 +43,7 @@ const cardVariants: Variants = {
     filter: "brightness(1.08)",
     transition: { duration: 0.18 },
   },
-  hover: { scale: 1.05, zIndex: 2, transition: cardTransition },
-};
-const priceVariants = {
-  rest: { scale: 0.85 },
-  hover: { scale: 1 },
+  hover: { zIndex: 2, transition: cardTransition },
 };
 const subscribeToHydration = () => () => {};
 const getHydrationSnapshot = () => true;
@@ -62,7 +58,6 @@ export function PricingOfferCards({
     getHydrationSnapshot,
     getServerHydrationSnapshot,
   );
-  const [hoveredOffer, setHoveredOffer] = useState<string | null>(null);
 
   return (
     <div className="pricing-offer-grid">
@@ -83,8 +78,6 @@ export function PricingOfferCards({
             custom={index}
             transition={cardTransition}
             variants={cardVariants}
-            onHoverStart={() => setHoveredOffer(offer.code)}
-            onHoverEnd={() => setHoveredOffer(null)}
           >
             <PricingOfferArtwork variant={(index % 3) as ArtworkVariant} />
             <div className="pricing-offer-card__body">
@@ -102,21 +95,9 @@ export function PricingOfferCards({
                 )}
               </div>
               <p className="pricing-offer-card__price">
-                <m.span
-                  className="pricing-offer-card__amount"
-                  initial={prefersReducedMotion ? false : "rest"}
-                  animate={
-                    prefersReducedMotion
-                      ? { scale: 1 }
-                      : hoveredOffer === offer.code
-                        ? "hover"
-                        : "rest"
-                  }
-                  transition={cardTransition}
-                  variants={priceVariants}
-                >
+                <span className="pricing-offer-card__amount">
                   {offer.isFree ? "Gratuit" : offer.formattedPrice}
-                </m.span>
+                </span>
                 {!offer.isFree && (
                   <span className="pricing-offer-card__unit">
                     FCFA <span>/ mois</span>
@@ -152,11 +133,15 @@ function PricingOfferArtwork({
   return (
     <m.svg
       aria-hidden="true"
-      className="pricing-offer-card__art"
+      className={`pricing-offer-card__art pricing-offer-card__art--${variant}`}
       focusable="false"
       preserveAspectRatio="xMidYMid slice"
       viewBox="0 0 320 384"
-      variants={{ hover: { scale: variant === 1 ? 1.05 : 1.5 } }}
+      variants={{
+        hover: {
+          scale: variant === 0 ? 1.5 : variant === 1 ? 1.05 : 1.25,
+        },
+      }}
       transition={cardTransition}
     >
       {variant === 0 && (

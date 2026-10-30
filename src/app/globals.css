@@ -11208,11 +11208,14 @@ textarea:focus-visible,
   position: relative;
   display: flex;
   min-width: 0;
+  transform-origin: center;
+  transition: transform 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 .pricing-offer-card-motion:hover,
 .pricing-offer-card-motion:focus-within {
   z-index: 2;
+  transform: scale(1.05);
 }
 
 .pricing-offer-card {
@@ -11229,15 +11232,11 @@ textarea:focus-visible,
   background-color: #4f46e5;
   color: #fff;
   box-shadow: 0 1rem 2.5rem rgb(20 25 45 / 14%);
-  transform-origin: center;
-  transition:
-    box-shadow 240ms ease,
-    transform 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  transition: box-shadow 240ms ease;
 }
 
 .pricing-offer-card-motion:hover .pricing-offer-card,
 .pricing-offer-card-motion:focus-within .pricing-offer-card {
-  transform: scale(1.05);
   box-shadow: 0 1.25rem 3rem rgb(20 25 45 / 22%);
 }
 
@@ -11269,6 +11268,23 @@ textarea:focus-visible,
   height: 100%;
   overflow: hidden;
   pointer-events: none;
+  transform-origin: center;
+  transition: transform 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.pricing-offer-card-motion:hover .pricing-offer-card__art--0,
+.pricing-offer-card-motion:focus-within .pricing-offer-card__art--0 {
+  transform: scale(1.5);
+}
+
+.pricing-offer-card-motion:hover .pricing-offer-card__art--1,
+.pricing-offer-card-motion:focus-within .pricing-offer-card__art--1 {
+  transform: scale(1.05);
+}
+
+.pricing-offer-card-motion:hover .pricing-offer-card__art--2,
+.pricing-offer-card-motion:focus-within .pricing-offer-card__art--2 {
+  transform: scale(1.25);
 }
 
 .pricing-offer-card__body {
@@ -11437,14 +11453,21 @@ textarea:focus-visible,
     transition: none;
   }
 
-  .pricing-offer-card-motion:hover .pricing-offer-card,
-  .pricing-offer-card-motion:focus-within .pricing-offer-card {
+  .pricing-offer-card-motion,
+  .pricing-offer-card-motion:hover,
+  .pricing-offer-card-motion:focus-within {
     transform: none;
   }
 
   .pricing-offer-card__amount,
   .pricing-offer-card-motion:hover .pricing-offer-card__amount,
   .pricing-offer-card-motion:focus-within .pricing-offer-card__amount {
+    transform: none;
+  }
+
+  .pricing-offer-card__art,
+  .pricing-offer-card-motion:hover .pricing-offer-card__art,
+  .pricing-offer-card-motion:focus-within .pricing-offer-card__art {
     transform: none;
   }
 }

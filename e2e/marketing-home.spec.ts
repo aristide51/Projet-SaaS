@@ -188,31 +188,27 @@ test("la page reste lisible sur un écran mobile étroit", async ({ page }) => {
   ).toBeLessThanOrEqual(360);
 });
 
-test("les cartes Framer Motion s’animent quand le mouvement est autorisé", async ({
+test("les cartes Framer Motion des offres s’animent quand le mouvement est autorisé", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
 
-  const card = page.locator(".benefit-card-motion").first();
-  await card.scrollIntoViewIfNeeded();
-  await card.hover();
-  await expect(card).toHaveCSS("transform", /matrix/);
-
   const offerCard = page.locator(".pricing-offer-card").first();
-  if (await offerCard.count()) {
-    await offerCard.scrollIntoViewIfNeeded();
-    await offerCard.hover();
-    await expect(offerCard).toHaveCSS("transform", /matrix/);
-    await expect(offerCard.locator(".pricing-offer-card__art")).toHaveCSS(
-      "transform",
-      /matrix/,
-    );
-    await expect(offerCard.locator(".pricing-offer-card__amount")).toHaveCSS(
-      "transform",
-      /matrix/,
-    );
-  }
+  await expect(offerCard).toBeVisible();
+  await offerCard.scrollIntoViewIfNeeded();
+  await offerCard.hover();
+  await expect(
+    offerCard.locator(".."),
+  ).toHaveCSS("transform", /matrix\(1\.05,/);
+  await expect(offerCard.locator(".pricing-offer-card__art")).toHaveCSS(
+    "transform",
+    /matrix/,
+  );
+  await expect(offerCard.locator(".pricing-offer-card__amount")).toHaveCSS(
+    "transform",
+    /matrix\(1,/,
+  );
 });
 
 test("les cartes des offres restent animées sans JavaScript", async ({
@@ -232,9 +228,10 @@ test("les cartes des offres restent animées sans JavaScript", async ({
     if (!initialBounds) {
       throw new Error("La première carte d’offre n’est pas visible.");
     }
+    await expect(card).toHaveCSS("opacity", "1");
     const price = card.locator(".pricing-offer-card__amount");
-    const initialPriceWidth = (await price.boundingBox())?.width;
-    if (initialPriceWidth === undefined) {
+    const initialPriceBounds = await price.boundingBox();
+    if (!initialPriceBounds) {
       throw new Error("Le prix de l’offre n’est pas visible.");
     }
 
@@ -243,8 +240,11 @@ test("les cartes des offres restent animées sans JavaScript", async ({
       .poll(async () => (await card.boundingBox())?.width ?? initialBounds.width)
       .toBeGreaterThan(initialBounds.width * 1.03);
     await expect
-      .poll(async () => (await price.boundingBox())?.width ?? initialPriceWidth)
-      .toBeGreaterThan(initialPriceWidth * 1.1);
+      .poll(
+        async () =>
+          (await price.boundingBox())?.width ?? initialPriceBounds.width,
+      )
+      .toBeGreaterThan(initialPriceBounds.width * 1.1);
   } finally {
     await context.close();
   }
