@@ -8,42 +8,37 @@ import { useEffect, useState } from "react";
 const slides = [
   {
     id: "vitrine",
-    eyebrow: "VOTRE COMMERCE · 01",
-    title: "VOTRE VITRINE",
-    accent: "EN LIGNE.",
+    title: "Votre commerce",
+    accent: "en ligne.",
     description:
-      "Vos produits et vos services restent visibles, même lorsque votre boutique est fermée.",
+      "Présentez vos offres et recevez les demandes au même endroit.",
     image: "/images/hero-boutique.png",
     imageAlt:
       "Commerçante burkinabè présentant son ordinateur dans une boutique en ligne.",
     target: "#vitrine",
-    linkLabel: "Découvrir la vitrine",
+    linkLabel: "Voir la vitrine",
   },
   {
     id: "commandes",
-    eyebrow: "VOS COMMANDES · 02",
-    title: "COMMANDES",
-    accent: "BIEN SUIVIES.",
-    description:
-      "Retrouvez les demandes de vos clients au même endroit et gardez le fil de votre activité.",
+    title: "Vos commandes",
+    accent: "mieux suivies.",
+    description: "Centralisez les commandes et suivez leur avancée.",
     image: "/images/hero-commandes.png",
     imageAlt:
       "Commerçant burkinabè consultant son téléphone et préparant un colis.",
     target: "#commandes",
-    linkLabel: "Découvrir les commandes",
+    linkLabel: "Voir les commandes",
   },
   {
     id: "rendez-vous",
-    eyebrow: "VOS RENDEZ-VOUS · 03",
-    title: "RENDEZ-VOUS",
-    accent: "SANS ATTENTE.",
-    description:
-      "Laissez vos clients choisir un créneau et organisez vos réservations simplement.",
+    title: "Vos rendez-vous",
+    accent: "sans effort.",
+    description: "Laissez vos clients choisir un créneau en ligne.",
     image: "/images/hero-rendez-vous.png",
     imageAlt:
       "Gérante de salon burkinabè tenant une tablette pour gérer ses rendez-vous.",
     target: "#rendez-vous",
-    linkLabel: "Découvrir les rendez-vous",
+    linkLabel: "Voir les rendez-vous",
   },
 ] as const;
 
@@ -137,7 +132,6 @@ export function MarketingHeroCarousel() {
                 prefersReducedMotion ? { duration: 0 } : slideTransition
               }
             >
-              <p className="marketing-kicker">{activeSlide.eyebrow}</p>
               <h1 id="hero-title">
                 {activeSlide.title}
                 <br />
@@ -152,14 +146,6 @@ export function MarketingHeroCarousel() {
                   {activeSlide.linkLabel} <span aria-hidden="true">↗</span>
                 </a>
               </div>
-              <ul aria-label="Points forts" className="marketing-proof">
-                <li>
-                  <span aria-hidden="true">✓</span> Mobile d’abord
-                </li>
-                <li>
-                  <span aria-hidden="true">✓</span> Paiement Mobile Money
-                </li>
-              </ul>
             </m.div>
           </AnimatePresence>
         </div>
