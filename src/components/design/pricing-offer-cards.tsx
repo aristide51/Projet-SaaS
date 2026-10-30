@@ -17,8 +17,10 @@ type PricingOffer = Readonly<{
 type ArtworkVariant = 0 | 1 | 2;
 
 const cardBackgrounds = ["#4f46e5", "#9333ea", "#be185d"] as const;
-const cardTransition = { duration: 1, ease: "backInOut" } as const;
-const cardVariants = { hover: { scale: 1.05, zIndex: 2 } };
+const cardTransition = { duration: 0.85, ease: "backInOut" } as const;
+const cardVariants = {
+  hover: { scale: 1.05, y: -8, zIndex: 2, transition: cardTransition },
+};
 const priceVariants = { hover: { scale: 1 } };
 
 export function PricingOfferCards({
