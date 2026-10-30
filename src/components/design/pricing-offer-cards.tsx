@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { m, useReducedMotion } from "framer-motion";
+import { useState } from "react";
 
 type PricingOffer = Readonly<{
   code: string;
@@ -21,12 +22,16 @@ const cardTransition = { duration: 1, ease: "backInOut" } as const;
 const cardVariants = {
   hover: { scale: 1.05, zIndex: 2, transition: cardTransition },
 };
-const priceVariants = { hover: { scale: 1 } };
+const priceVariants = {
+  rest: { scale: 0.85 },
+  hover: { scale: 1 },
+};
 
 export function PricingOfferCards({
   offers,
 }: Readonly<{ offers: PricingOffer[] }>) {
   const prefersReducedMotion = useReducedMotion();
+  const [hoveredOffer, setHoveredOffer] = useState<string | null>(null);
 
   return (
     <div className="pricing-offer-grid" data-stagger="offers">
@@ -40,6 +45,8 @@ export function PricingOfferCards({
             }}
             transition={cardTransition}
             variants={cardVariants}
+            onHoverStart={() => setHoveredOffer(offer.code)}
+            onHoverEnd={() => setHoveredOffer(null)}
             {...(prefersReducedMotion ? {} : { whileHover: "hover" })}
           >
             <PricingOfferArtwork variant={(index % 3) as ArtworkVariant} />
@@ -60,7 +67,14 @@ export function PricingOfferCards({
               <p className="pricing-offer-card__price">
                 <m.span
                   className="pricing-offer-card__amount"
-                  initial={prefersReducedMotion ? false : { scale: 0.85 }}
+                  initial={prefersReducedMotion ? false : "rest"}
+                  animate={
+                    prefersReducedMotion
+                      ? { scale: 1 }
+                      : hoveredOffer === offer.code
+                        ? "hover"
+                        : "rest"
+                  }
                   transition={cardTransition}
                   variants={priceVariants}
                 >
