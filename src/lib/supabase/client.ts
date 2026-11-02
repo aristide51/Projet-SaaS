@@ -1,3 +1,5 @@
+"use client";
+
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { validateServerEnv } from "@/lib/env";
@@ -18,6 +20,8 @@ export function createClient() {
     NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       auth: {
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
         persistSession: false,
       },
     },

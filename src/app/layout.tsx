@@ -3,6 +3,7 @@ import Script from "next/script";
 import { headers } from "next/headers";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/unbounded";
+import "@/components/design/auth-layout.css";
 import "./globals.css";
 import { getSiteUrl } from "@/lib/site-url";
 import { DeviceCompatibilityGate } from "@/components/design/device-compatibility-gate";
