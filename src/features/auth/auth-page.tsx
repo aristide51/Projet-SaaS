@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { getSafeRedirectPath } from "@/lib/auth/redirect";
 import { AuthForm, type AuthMode } from "./auth-form";
+import { AuthLayout } from "@/components/design/auth-layout";
 
 export async function AuthPage({
   mode,
@@ -13,13 +14,16 @@ export async function AuthPage({
   const safeNext = getSafeRedirectPath(next);
 
   return (
-    <main className={`auth-main auth-main--${mode}`}>
-      <AuthForm
-        mode={mode}
-        next={safeNext}
-        nonce={requestHeaders.get("x-nonce") ?? ""}
-        siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""}
-      />
-    </main>
+    <AuthLayout
+      leftContent={null}
+      rightContent={
+        <AuthForm
+          mode={mode}
+          next={safeNext}
+          nonce={requestHeaders.get("x-nonce") ?? ""}
+          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""}
+        />
+      }
+    />
   );
 }
