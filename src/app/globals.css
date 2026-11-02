@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../components/design/auth-layout.css";
 
 :root {
   color-scheme: light;

@@ -2,7 +2,7 @@ import { useEffect, useRef, type RefObject } from "react";
 
 type GsapContext = {
   revert: () => void;
-  current: gsap.Core | null;
+  current: gsap.Context | null;
 };
 
 /**
@@ -13,7 +13,7 @@ type GsapContext = {
 export function useGsap(
   factory: (context: {
     revert: () => void;
-    gsap: gsap.Core;
+    gsap: typeof import("gsap").gsap;
   }) => void,
 ) {
   const contextRef = useRef<GsapContext | null>(null);
@@ -22,25 +22,25 @@ export function useGsap(
     let cancelled = false;
 
     async function init() {
-      const [{ gsap }, { default: scrollTrigger }] = await Promise.all([
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
         import("gsap"),
         import("gsap/ScrollTrigger"),
       ]);
 
       if (cancelled) return;
 
-      const context = gsap.context(
-        () => {
-          factory({ revert: contextRef.current?.revert ?? (() => undefined), gsap });
-        },
-        undefined,
-        (ctx) => {
-          contextRef.current = ctx;
-        },
-      );
+      gsap.registerPlugin(ScrollTrigger);
+      const context = gsap.context((ctx) => {
+        factory({ revert: () => ctx.revert(), gsap });
+      });
+      contextRef.current = {
+        current: context,
+        revert: () => context.revert(),
+      };
 
       if (cancelled) {
         context.revert();
+        contextRef.current = null;
       }
     }
 
@@ -49,6 +49,7 @@ export function useGsap(
     return () => {
       cancelled = true;
       contextRef.current?.revert();
+      contextRef.current = null;
     };
   }, [factory]);
 

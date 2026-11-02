@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 // Truste la page d'accueil n'utilise pas GSAP côté client de façon synchrone
 const HeroScene = dynamic(
@@ -13,18 +13,12 @@ const HeroScene = dynamic(
 );
 
 export function AuthLayout({
-  children,
-  leftContent,
   rightContent,
   className,
 }: {
-  children?: ReactNode;
-  leftContent: ReactNode;
   rightContent: ReactNode;
   className?: string;
 }) {
-  const isMobile = useMemo(() => window.innerWidth < 1024, []);
-
   return (
     <main className={`auth-main auth-main--split ${className ?? ""}`}>
       <div className="auth-main__grid">
@@ -51,7 +45,7 @@ export function AuthLayout({
           <div className="auth-main__stats">
             <div className="auth-main__stat">
               <strong className="auth-main__stat-value">FCFA</strong>
-              <p className="auth-main__stat-label">Paiements en mobilenomy</p>
+              <p className="auth-main__stat-label">Paiements mobiles</p>
             </div>
             <div className="auth-main__stat">
               <strong className="auth-main__stat-value">0</strong>

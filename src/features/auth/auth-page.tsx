@@ -15,7 +15,6 @@ export async function AuthPage({
 
   return (
     <AuthLayout
-      leftContent={null}
       rightContent={
         <AuthForm
           mode={mode}
