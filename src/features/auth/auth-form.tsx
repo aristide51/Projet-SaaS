@@ -30,7 +30,7 @@ const modeContent: Record<AuthMode, { title: string; description: string }> = {
   },
   signup: {
     title: "Créer un compte",
-    description: "Rejoins les commerces locaux du Burkina Faso.",
+    description: "Crée ton espace commerçant et prépare ta boutique en ligne.",
   },
   magic: {
     title: "Connexion par e-mail",
@@ -199,7 +199,11 @@ export function AuthForm({ mode, siteKey, nonce, next }: AuthFormProps) {
           <span className="auth-brand__name">Faso Studio</span>
         </div>
       ) : (
-        <p className="auth-eyebrow">Faso · commerces locaux</p>
+        <p className="auth-eyebrow">
+          {mode === "signup"
+            ? "Créer mon espace commerçant"
+            : "Faso · commerces locaux"}
+        </p>
       )}
       <div
         className={
