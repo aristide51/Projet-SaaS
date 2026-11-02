@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import * as THREE from "three";
 
 /**
  * Scène Three.js décorative pour le panneau de gauche des pages
@@ -19,10 +20,6 @@ export function HeroScene() {
     const mount = mountRef.current;
     if (!mount) return;
 
-    const { THREE } = window as unknown as {
-      THREE: typeof THREE;
-    };
-
     const size = mount.clientWidth;
     const aspect = size / Math.max(size, 1);
 
@@ -40,7 +37,7 @@ export function HeroScene() {
     renderer.setSize(size, Math.max(size * 0.7, 240));
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    mount.appendChild(renderer);
+    mount.appendChild(renderer.domElement);
 
     // Sphère subtile + plan de fond polymère
     const geometry = new THREE.SphereGeometry(1.6, 48, 48);
@@ -93,9 +90,11 @@ export function HeroScene() {
     return () => {
       animFrameRef.current = null;
       rendererRef.current?.dispose();
-      mountRef.current?.removeChild(rendererRef.current!);
+      rendererRef.current?.domElement.remove();
     };
   }, [init]);
 
-  return <div ref={mountRef} className="auth-hero-scene__mount" aria-hidden="true" />;
+  return (
+    <div ref={mountRef} className="auth-hero-scene__mount" aria-hidden="true" />
+  );
 }
