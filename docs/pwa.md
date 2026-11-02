@@ -77,7 +77,7 @@ Références consultées :
   avec le nonce absent de cette page préchargée. Les routes dynamiques conservent
   leur politique CSP avec nonce et `strict-dynamic`.
 
-Le nom `boutiques-locales-…-2026-10-28-v2` identifie les caches gérés par le
+Le nom `boutiques-locales-…-2026-11-02-v3` identifie les caches gérés par le
 worker. Incrémenter `CACHE_VERSION` lors d’un changement incompatible de
 stratégie ; le worker supprime les versions antérieures à l’activation.
 

@@ -1,4 +1,4 @@
-const CACHE_VERSION = "2026-10-28-v2";
+const CACHE_VERSION = "2026-11-02-v3";
 const CACHE_PREFIX = "boutiques-locales-";
 const STATIC_CACHE = `${CACHE_PREFIX}static-${CACHE_VERSION}`;
 const PUBLIC_PAGES_CACHE = `${CACHE_PREFIX}public-pages-${CACHE_VERSION}`;

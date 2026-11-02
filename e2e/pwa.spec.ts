@@ -10,7 +10,7 @@ test("installe la PWA et sert une page publique déjà visitée hors connexion",
   await expect(page.locator('link[rel="manifest"]')).toHaveCount(0);
   await expect(
     page.getByRole("heading", {
-      name: "Votre boutique, en ligne en quelques minutes.",
+      name: "Votre commerce en ligne.",
     }),
   ).toBeVisible();
 
@@ -33,7 +33,7 @@ test("installe la PWA et sert une page publique déjà visitée hors connexion",
     .toContain("/sw.js");
   await page.reload();
   const cachedOfflineAssets = await page.evaluate(async () => {
-    const cache = await caches.open("boutiques-locales-static-2026-10-28-v2");
+    const cache = await caches.open("boutiques-locales-static-2026-11-02-v3");
     const offlinePage = await cache.match("/offline.html");
     const offlineScript = await cache.match("/pwa-offline.js");
     return {
@@ -66,7 +66,7 @@ test("installe la PWA et sert une page publique déjà visitée hors connexion",
   await page.evaluate(() => window.dispatchEvent(new Event("offline")));
   await expect(
     page.getByRole("heading", {
-      name: "Votre boutique, en ligne en quelques minutes.",
+      name: "Votre commerce en ligne.",
     }),
   ).toBeVisible();
   await expect(
