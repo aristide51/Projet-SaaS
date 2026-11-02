@@ -1,20 +1,14 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef } from "react";
 
-type GsapContext = {
-  revert: () => void;
-  current: gsap.Context | null;
-};
+type GsapContext = gsap.Context;
+type GsapApi = typeof import("gsap").gsap;
 
 /**
- * Hook GSAP — encapsule `gsap.context()` et s'assure que le contexte
- * est restauré proprement à l'unmount. Aucun `gsap` importé globalement
- * : on importe dans chaque composant (`import { gsap } from "gsap"`).
+ * Hook GSAP — encapsule `gsap.context()` et restaure proprement le contexte
+ * au démontage. GSAP et ScrollTrigger sont chargés uniquement côté client.
  */
 export function useGsap(
-  factory: (context: {
-    revert: () => void;
-    gsap: typeof import("gsap").gsap;
-  }) => void,
+  factory: (context: { revert: () => void; gsap: GsapApi }) => void,
 ) {
   const contextRef = useRef<GsapContext | null>(null);
 
@@ -33,10 +27,7 @@ export function useGsap(
       const context = gsap.context((ctx) => {
         factory({ revert: () => ctx.revert(), gsap });
       });
-      contextRef.current = {
-        current: context,
-        revert: () => context.revert(),
-      };
+      contextRef.current = context;
 
       if (cancelled) {
         context.revert();
@@ -53,5 +44,5 @@ export function useGsap(
     };
   }, [factory]);
 
-  return contextRef as RefObject<GsapContext>;
+  return contextRef;
 }

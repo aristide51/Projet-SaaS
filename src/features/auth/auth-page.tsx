@@ -15,6 +15,7 @@ export async function AuthPage({
 
   return (
     <AuthLayout
+      showLoginAside={mode === "login"}
       rightContent={
         <AuthForm
           mode={mode}
