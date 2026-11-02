@@ -41,8 +41,16 @@
   gap: var(--space-6);
   padding: var(--space-8) var(--space-6);
   background:
-    radial-gradient(120% 90% at 85% 10%, rgba(8, 120, 47, 0.14) 0%, rgba(8, 120, 47, 0) 60%),
-    radial-gradient(90% 80% at 5% 90%, rgba(23, 102, 63, 0.18) 0%, rgba(23, 102, 63, 0) 55%),
+    radial-gradient(
+      120% 90% at 85% 10%,
+      rgba(8, 120, 47, 0.14) 0%,
+      rgba(8, 120, 47, 0) 60%
+    ),
+    radial-gradient(
+      90% 80% at 5% 90%,
+      rgba(23, 102, 63, 0.18) 0%,
+      rgba(23, 102, 63, 0) 55%
+    ),
     var(--color-canvas);
   border-radius: var(--radius-xl);
   min-height: 520px;
@@ -188,8 +196,16 @@
   border-radius: var(--radius-xl);
   overflow: hidden;
   background:
-    radial-gradient(120% 90% at 85% 10%, rgba(8, 120, 47, 0.12) 0%, rgba(8, 120, 47, 0) 55%),
-    radial-gradient(90% 80% at 5% 90%, rgba(23, 102, 63, 0.16) 0%, rgba(23, 102, 63, 0) 55%),
+    radial-gradient(
+      120% 90% at 85% 10%,
+      rgba(8, 120, 47, 0.12) 0%,
+      rgba(8, 120, 47, 0) 55%
+    ),
+    radial-gradient(
+      90% 80% at 5% 90%,
+      rgba(23, 102, 63, 0.16) 0%,
+      rgba(23, 102, 63, 0) 55%
+    ),
     var(--color-canvas);
 }
 
@@ -226,7 +242,46 @@
 .auth-hero-scene__orb--tiny {
   width: 90px;
   height: 90px;
-  background: rgba(8, 120, 47, 0.10);
+  background: rgba(8, 120, 47, 0.1);
   top: 30%;
   right: 18%;
+}
+
+.auth-main--signup {
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.auth-main--signup .auth-main__grid {
+  grid-template-columns: minmax(0, 1.08fr) minmax(25rem, 0.92fr);
+  gap: clamp(1rem, 3vw, 3rem);
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.auth-main--signup .auth-main__visual {
+  min-height: min(40rem, calc(100svh - 9rem));
+}
+
+.auth-main--signup .auth-main__form {
+  min-height: auto;
+  padding: clamp(0.5rem, 2vw, 1.5rem);
+}
+
+@media (max-width: 1023px) {
+  .auth-main--signup {
+    padding: 1rem;
+  }
+
+  .auth-main--signup .auth-main__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+    padding: 0;
+  }
+
+  .auth-main--signup .auth-main__visual {
+    min-height: 0;
+  }
+
+  .auth-main--signup .auth-main__form {
+    padding: 0;
+  }
 }
