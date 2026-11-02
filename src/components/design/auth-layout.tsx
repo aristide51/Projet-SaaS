@@ -1,16 +1,6 @@
-"use client";
-
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import type { ReactNode } from "react";
-
-const HeroScene = dynamic(
-  () => import("./hero-scene").then((module) => module.HeroScene),
-  {
-    ssr: false,
-    loading: () => <div className="auth-hero__scene" aria-hidden="true" />,
-  },
-);
+import { HeroScene } from "./hero-scene";
 
 export function AuthLayout({
   showLoginAside = false,
