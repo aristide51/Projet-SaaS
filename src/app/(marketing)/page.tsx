@@ -319,19 +319,43 @@ export default async function HomePage() {
       </MarketingMotion>
 
       <footer className="marketing-footer">
-        <Link className="marketing-brand" href="/">
-          <span aria-hidden="true" className="marketing-brand__mark">
-            F
-          </span>
-          <span>Faso Studio</span>
-        </Link>
-        <p>Des commerces d’ici, visibles partout.</p>
-        <nav aria-label="Navigation de pied de page">
-          <Link href="/shops">Annuaire</Link>
-          <Link href="/auth/login">Connexion</Link>
-          <Link href="/auth/signup">Créer une boutique</Link>
-        </nav>
-        <small>© {new Date().getFullYear()} Faso Studio</small>
+        <div className="marketing-footer__main">
+          <div className="marketing-footer__brand">
+            <Link className="marketing-brand" href="/">
+              <span aria-hidden="true" className="marketing-brand__mark">
+                F
+              </span>
+              <span>Faso Studio</span>
+            </Link>
+            <p>Des commerces d’ici, visibles partout.</p>
+          </div>
+          <nav
+            aria-label="Explorer Faso Studio"
+            className="marketing-footer__nav"
+          >
+            <span className="marketing-footer__label">Explorer</span>
+            <Link href="#solutions">Solutions</Link>
+            <Link href="#fonctionnement">Comment ça marche</Link>
+            <Link href="#offres">Tarifs</Link>
+            <Link href="/shops">Annuaire</Link>
+          </nav>
+          <div className="marketing-footer__account">
+            <span className="marketing-footer__label">Votre espace</span>
+            <Link className="marketing-footer__login" href="/auth/login">
+              Connexion
+            </Link>
+            <Link
+              className="marketing-button marketing-button--small"
+              href="/auth/signup"
+            >
+              Créer ma boutique <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+        </div>
+        <div className="marketing-footer__bottom">
+          <small>© {new Date().getFullYear()} Faso Studio</small>
+          <span>Le numérique au service des commerces du Burkina.</span>
+        </div>
       </footer>
     </main>
   );

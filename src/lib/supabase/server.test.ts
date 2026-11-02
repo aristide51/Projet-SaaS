@@ -16,6 +16,13 @@ vi.mock("@supabase/ssr", () => ({
   createServerClient: serverClientFactory,
 }));
 
+vi.mock("@/lib/env", () => ({
+  validateServerEnv: vi.fn(() => ({
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  })),
+}));
+
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => cookieStore),
 }));
