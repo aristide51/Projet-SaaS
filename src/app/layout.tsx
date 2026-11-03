@@ -5,6 +5,7 @@ import "@fontsource-variable/inter";
 import "@fontsource-variable/unbounded";
 import "@/components/design/auth-layout.css";
 import "./globals.css";
+import "@/components/design/site-theme.css";
 import { getSiteUrl } from "@/lib/site-url";
 import { DeviceCompatibilityGate } from "@/components/design/device-compatibility-gate";
 
