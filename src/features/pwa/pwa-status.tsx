@@ -19,6 +19,8 @@ export function PwaStatus({ showInstall = false }: { showInstall?: boolean }) {
   const reloadAfterUpdate = useRef(false);
 
   useEffect(() => {
+    if (process.env.NODE_ENV === "development") return;
+
     const updateOnlineStatus = () => {
       setIsOffline(!navigator.onLine);
       document.documentElement.dataset.pwaOffline = String(!navigator.onLine);

@@ -1,8 +1,48 @@
+.workspace-layout--account {
+  min-height: 100vh;
+  background: var(--marketing-paper);
+  color: var(--marketing-ink);
+  font-family: var(--font-body);
+}
+
+.workspace-layout--account .workspace-topbar {
+  width: min(100% - 3rem, 78rem);
+  min-height: 4.75rem;
+  border-color: rgb(20 34 26 / 10%);
+  background: rgb(255 255 255 / 96%);
+}
+
+.workspace-layout--account .workspace-topbar__brand {
+  color: var(--marketing-forest-dark);
+}
+
+.workspace-layout--account .workspace-topbar__mark {
+  border-radius: 0.6rem;
+  background: var(--marketing-forest);
+  color: #fff;
+}
+
+.workspace-layout--account .workspace-topbar__nav a {
+  color: var(--marketing-ink);
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.workspace-layout--account .workspace-topbar__nav a:hover {
+  background: var(--marketing-paper);
+  color: var(--marketing-red);
+  transform: translateY(-1px);
+}
+
 .account-main {
   min-height: 100vh;
   background:
-    radial-gradient(ellipse at 12% 0%, rgb(8 120 47 / 7%), transparent 34rem),
-    var(--color-canvas);
+    radial-gradient(ellipse at 12% 0%, rgb(8 122 58 / 7%), transparent 34rem),
+    var(--marketing-paper);
+  color: var(--marketing-ink);
+  font-family: var(--font-body);
 }
 
 .account-wrapper {
@@ -14,7 +54,6 @@
   padding: clamp(1.25rem, 3vw, 2.5rem) 0 3rem;
 }
 
-.account-header,
 .account-profile-card,
 .account-stats .stat-card,
 .account-section > .customer-orders {
@@ -25,12 +64,41 @@
 }
 
 .account-header {
+  position: relative;
   display: grid;
   gap: 1.5rem;
   padding: clamp(1.25rem, 3vw, 2rem);
+  overflow: hidden;
+  isolation: isolate;
+  border: 0;
+  border-radius: 1.75rem;
+  background:
+    radial-gradient(ellipse at 92% 10%, rgb(255 229 0 / 12%), transparent 36%),
+    linear-gradient(145deg, var(--marketing-forest-dark), #043d20 65%, #022b18);
+  box-shadow: 0 1.25rem 3rem rgb(18 61 42 / 14%);
+  color: #fff;
+}
+
+.account-header__scene {
+  position: absolute;
+  top: 50%;
+  right: 7rem;
+  z-index: 0;
+  width: clamp(12rem, 27vw, 21rem);
+  height: clamp(12rem, 27vw, 18rem);
+  opacity: 0.32;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.account-header__scene .auth-hero-scene__mount {
+  min-height: 0;
+  height: 100%;
 }
 
 .account-header__identity {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -44,10 +112,10 @@
   flex: 0 0 auto;
   place-items: center;
   overflow: hidden;
-  border: 2px solid var(--color-border);
+  border: 2px solid rgb(255 229 0 / 58%);
   border-radius: 50%;
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+  background: var(--marketing-yellow);
+  color: var(--marketing-forest-dark);
   font-family: var(--font-display);
   font-size: 1.35rem;
   font-weight: 700;
@@ -66,30 +134,44 @@
 .account-header__eyebrow,
 .account-section__eyebrow {
   margin: 0 0 0.4rem;
-  color: var(--color-primary);
+  color: var(--marketing-forest);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
+.account-header__eyebrow {
+  color: var(--marketing-yellow);
+}
+
 .account-header h1 {
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(1.35rem, 3vw, 2rem);
-  line-height: 1.3;
+  letter-spacing: -0.055em;
+  line-height: 1.2;
+  text-transform: uppercase;
   overflow-wrap: anywhere;
 }
 
 .account-header__subtitle {
   margin: 0.35rem 0 0;
-  color: var(--color-muted);
+  color: rgb(255 255 255 / 76%);
   overflow-wrap: anywhere;
 }
 
 .quick-actions {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 0.75rem;
+}
+
+.quick-action-motion,
+.account-stat-motion {
+  width: 100%;
+  height: 100%;
 }
 
 .quick-action {
@@ -98,20 +180,19 @@
   align-items: center;
   gap: 0.85rem;
   padding: 0.9rem 1rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid rgb(255 255 255 / 20%);
   border-radius: var(--radius-lg);
-  color: inherit;
+  background: rgb(255 255 255 / 6%);
+  color: #fff;
   text-decoration: none;
   transition:
     border-color var(--duration-fast) var(--ease-standard),
-    background-color var(--duration-fast) var(--ease-standard),
-    transform var(--duration-fast) var(--ease-standard);
+    background-color var(--duration-fast) var(--ease-standard);
 }
 
 .quick-action:hover {
-  transform: translateY(-1px);
-  border-color: var(--color-border-strong);
-  background: var(--color-surface-raised);
+  border-color: rgb(255 229 0 / 65%);
+  background: rgb(255 255 255 / 12%);
 }
 
 .quick-action:focus-visible {
@@ -126,8 +207,8 @@
   flex: 0 0 auto;
   place-items: center;
   border-radius: var(--radius-md);
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+  background: var(--marketing-yellow);
+  color: var(--marketing-forest-dark);
   font-size: 1.2rem;
 }
 
@@ -153,6 +234,9 @@
 .account-stats .stat-card {
   min-width: 0;
   padding: 1.15rem;
+  border-top: 3px solid var(--marketing-red);
+  border-radius: 1.1rem;
+  background: #fff;
 }
 
 .stat-card__icon {
@@ -163,8 +247,8 @@
   justify-content: center;
   padding: 0.35rem;
   border-radius: var(--radius-md);
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+  background: var(--marketing-paper);
+  color: var(--marketing-forest);
   font-size: 0.7rem;
   font-weight: 700;
 }
@@ -207,6 +291,7 @@
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+  letter-spacing: -0.045em;
   line-height: 1.35;
 }
 
@@ -220,6 +305,10 @@
 
 .account-profile-card {
   padding: clamp(1rem, 2.5vw, 1.75rem);
+}
+
+.account-profile-motion {
+  width: 100%;
 }
 
 .account-profile-card .auth-form {
@@ -261,6 +350,16 @@
   background: var(--color-surface);
 }
 
+.account-main .ui-button--primary {
+  border-color: var(--marketing-red);
+  background: var(--marketing-red);
+}
+
+.account-main .ui-button--primary:hover:not(:disabled) {
+  border-color: #bd0914;
+  background: #bd0914;
+}
+
 .account-main .customer-order__header {
   flex-wrap: wrap;
   gap: 0.75rem;
@@ -289,6 +388,10 @@
     align-items: center;
   }
 
+  .account-header__scene {
+    right: 12rem;
+  }
+
   .quick-actions {
     grid-template-columns: 1fr;
   }
@@ -311,12 +414,46 @@
   }
 }
 
+@media (max-width: 760px) {
+  .account-header__scene {
+    right: 0.5rem;
+    width: 11rem;
+    height: 11rem;
+    opacity: 0.2;
+  }
+
+  .workspace-layout--account .workspace-topbar {
+    width: calc(100% - 1.5rem);
+    min-height: 4.2rem;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.55rem;
+    padding-block: 0.65rem;
+  }
+
+  .workspace-layout--account .workspace-topbar__nav {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
+  }
+
+  .workspace-layout--account .workspace-topbar__nav a {
+    min-height: 2.25rem;
+    flex: 0 0 auto;
+    padding-inline: 0.65rem;
+    font-size: 0.75rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .quick-action {
+  .quick-action,
+  .workspace-layout--account .workspace-topbar__nav a {
     transition: none;
   }
 
-  .quick-action:hover {
+  .workspace-layout--account .workspace-topbar__nav a:hover {
     transform: none;
   }
 }

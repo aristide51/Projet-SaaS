@@ -27,6 +27,13 @@ export default async function RootLayout({
   return (
     <html lang="fr">
       <body>
+        {process.env.NODE_ENV === "development" ? (
+          <Script
+            nonce={requestHeaders.get("x-nonce") ?? undefined}
+            src="/pwa-dev-cleanup.js"
+            strategy="afterInteractive"
+          />
+        ) : null}
         <DeviceCompatibilityGate>{children}</DeviceCompatibilityGate>
         <Script
           nonce={requestHeaders.get("x-nonce") ?? undefined}

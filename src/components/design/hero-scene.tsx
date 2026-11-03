@@ -14,27 +14,37 @@ export function HeroScene() {
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
     const mountElement = mount;
+    const motionPreference = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    );
 
     let disposed = false;
+    let initialized = false;
+    let isVisible = false;
     let animationFrame: number | null = null;
     let renderer: WebGLRenderer | null = null;
     let mesh: Mesh | null = null;
     let material: MeshStandardMaterial | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let visibilityObserver: IntersectionObserver | null = null;
+    let startAnimation: (() => void) | undefined;
 
     async function init() {
+      if (initialized || motionPreference.matches) return;
+      initialized = true;
+
       const THREE = await import("three");
-      if (disposed || !mountElement.isConnected) return;
+      if (disposed || !mountElement.isConnected || motionPreference.matches) {
+        initialized = false;
+        return;
+      }
 
-      const size = mountElement.clientWidth;
-      const aspect = size / Math.max(size, 1);
+      const width = Math.max(mountElement.clientWidth, 1);
+      const height = Math.max(mountElement.clientHeight, 1);
       const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf7f8f6);
 
-      const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 100);
+      const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
       camera.position.set(0, 2, 6);
       camera.lookAt(0, 0, 0);
 
@@ -42,17 +52,17 @@ export function HeroScene() {
         antialias: true,
         alpha: true,
       });
-      renderer.setSize(size, Math.max(size * 0.7, 240));
+      renderer.setSize(width, height);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       mountElement.appendChild(renderer.domElement);
 
       const geometry = new THREE.SphereGeometry(1.6, 48, 48);
       material = new THREE.MeshStandardMaterial({
-        color: 0x08782f,
+        color: 0xe10b17,
         roughness: 0.35,
         metalness: 0.18,
-        emissive: 0x08782f,
+        emissive: 0x5c0810,
         emissiveIntensity: 0.08,
       });
       mesh = new THREE.Mesh(geometry, material);
@@ -60,30 +70,78 @@ export function HeroScene() {
       mesh.position.y = -0.4;
       scene.add(mesh);
 
-      const light = new THREE.DirectionalLight(0x08782f, 1.2);
+      const light = new THREE.DirectionalLight(0xffe500, 1.2);
       light.position.set(3, 5, 4);
       scene.add(light);
 
-      const ambient = new THREE.AmbientLight(0x08782f, 0.35);
+      const ambient = new THREE.AmbientLight(0xffffff, 0.35);
       scene.add(ambient);
 
-      const animate = () => {
+      const render = () => {
         if (disposed || !renderer || !mesh) return;
 
         mesh.rotation.y += 0.008;
         mesh.rotation.x = Math.sin(Date.now() * 0.0003) * 0.06;
         renderer.render(scene, camera);
-        animationFrame = requestAnimationFrame(animate);
+        animationFrame = window.requestAnimationFrame(render);
+      };
+      startAnimation = () => {
+        if (isVisible && animationFrame === null) {
+          animationFrame = window.requestAnimationFrame(render);
+        }
       };
 
-      animationFrame = requestAnimationFrame(animate);
+      resizeObserver = new ResizeObserver(() => {
+        if (!renderer) return;
+        const nextWidth = Math.max(mountElement.clientWidth, 1);
+        const nextHeight = Math.max(mountElement.clientHeight, 1);
+        camera.aspect = nextWidth / nextHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(nextWidth, nextHeight);
+      });
+      resizeObserver.observe(mountElement);
+      visibilityObserver = new IntersectionObserver(([entry]) => {
+        isVisible = Boolean(entry?.isIntersecting);
+        if (isVisible && !motionPreference.matches) {
+          startAnimation?.();
+        } else if (!isVisible && animationFrame !== null) {
+          window.cancelAnimationFrame(animationFrame);
+          animationFrame = null;
+        }
+      });
+      visibilityObserver.observe(mountElement);
+
+      startAnimation();
     }
 
-    void init();
+    function handleMotionPreferenceChange() {
+      if (motionPreference.matches) {
+        if (animationFrame !== null) {
+          window.cancelAnimationFrame(animationFrame);
+          animationFrame = null;
+        }
+        return;
+      }
+
+      if (startAnimation) {
+        startAnimation();
+      } else {
+        void init();
+      }
+    }
+
+    motionPreference.addEventListener("change", handleMotionPreferenceChange);
+    if (!motionPreference.matches) void init();
 
     return () => {
       disposed = true;
+      motionPreference.removeEventListener(
+        "change",
+        handleMotionPreferenceChange,
+      );
       if (animationFrame !== null) cancelAnimationFrame(animationFrame);
+      resizeObserver?.disconnect();
+      visibilityObserver?.disconnect();
       mesh?.geometry.dispose();
       material?.dispose();
       renderer?.dispose();
@@ -92,10 +150,6 @@ export function HeroScene() {
   }, []);
 
   return (
-    <div
-      ref={mountRef}
-      className="auth-hero-scene__mount"
-      aria-hidden="true"
-    />
+    <div ref={mountRef} className="auth-hero-scene__mount" aria-hidden="true" />
   );
 }
