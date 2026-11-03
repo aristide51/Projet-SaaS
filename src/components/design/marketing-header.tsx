@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandUtilityBar } from "./brand-utility-bar";
 
 type MarketingHeaderProps = Readonly<{
   currentPath: "/" | "/shops";
@@ -15,14 +16,7 @@ export function MarketingHeader({ currentPath }: MarketingHeaderProps) {
 
   return (
     <header className="marketing-header">
-      <div className="marketing-utility-bar">
-        <p>Le numérique au service des commerces du Burkina.</p>
-        <div className="marketing-utility-bar__meta">
-          <span>Tarifs en FCFA</span>
-          <span aria-hidden="true">·</span>
-          <span>Mobile Money</span>
-        </div>
-      </div>
+      <BrandUtilityBar />
       <div className="marketing-header__main">
         <Link className="marketing-brand" href="/">
           <span aria-hidden="true" className="marketing-brand__mark">

@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { getSafeRedirectPath } from "@/lib/auth/redirect";
 import { AuthForm, type AuthMode } from "./auth-form";
 import { AuthLayout } from "@/components/design/auth-layout";
+import { BrandUtilityBar } from "@/components/design/brand-utility-bar";
+import { MarketingMotion } from "@/components/design/marketing-motion";
 
 export async function AuthPage({
   mode,
@@ -15,23 +17,26 @@ export async function AuthPage({
   const safeNext = getSafeRedirectPath(next);
 
   return (
-    <AuthLayout
-      {...(mode === "signup"
-        ? {
-            className: "auth-main--signup",
-            leftContent: <SignupAside />,
-          }
-        : {})}
-      showLoginAside={mode === "login"}
-      rightContent={
-        <AuthForm
-          mode={mode}
-          next={safeNext}
-          nonce={requestHeaders.get("x-nonce") ?? ""}
-          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""}
-        />
-      }
-    />
+    <MarketingMotion>
+      <BrandUtilityBar />
+      <AuthLayout
+        {...(mode === "signup"
+          ? {
+              className: "auth-main--signup",
+              leftContent: <SignupAside />,
+            }
+          : {})}
+        showLoginAside={mode === "login"}
+        rightContent={
+          <AuthForm
+            mode={mode}
+            next={safeNext}
+            nonce={requestHeaders.get("x-nonce") ?? ""}
+            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""}
+          />
+        }
+      />
+    </MarketingMotion>
   );
 }
 

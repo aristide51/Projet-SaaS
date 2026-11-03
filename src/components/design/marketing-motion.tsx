@@ -129,9 +129,13 @@ export function MarketingMotion({
           .forEach((element) => {
             const isBenefitGrid = element.dataset.stagger === "benefits";
             const isOfferGrid = element.dataset.stagger === "offers";
-            const targets = isBenefitGrid
-              ? element.querySelectorAll<HTMLElement>(".benefit-card")
-              : element.children;
+            const targets = element.dataset.staggerTarget
+              ? element.querySelectorAll<HTMLElement>(
+                  element.dataset.staggerTarget,
+                )
+              : isBenefitGrid
+                ? element.querySelectorAll<HTMLElement>(".benefit-card")
+                : element.children;
             gsap.fromTo(
               targets,
               {
@@ -174,6 +178,10 @@ export function MarketingMotion({
       if (preference.matches) {
         active = false;
         context?.revert();
+        context = undefined;
+      } else {
+        active = true;
+        void initialize();
       }
     }
 

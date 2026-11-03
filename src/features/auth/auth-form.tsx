@@ -190,6 +190,7 @@ export function AuthForm({ mode, siteKey, nonce, next }: AuthFormProps) {
     <section
       aria-labelledby="auth-title"
       className={`auth-card auth-card--${mode}`}
+      data-reveal
     >
       {mode === "login" ? (
         <div className="auth-brand">
@@ -220,6 +221,7 @@ export function AuthForm({ mode, siteKey, nonce, next }: AuthFormProps) {
         className={
           mode === "login" ? "auth-form auth-form--login" : "auth-form"
         }
+        data-stagger
         noValidate
         onSubmit={handleSubmit(submit)}
       >

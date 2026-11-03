@@ -10,9 +10,10 @@ import {
 } from "@/features/orders/customer-orders";
 import { CUSTOMER_ORDER_PAGE_SIZE } from "@/features/orders/types";
 import { ProfileForm } from "@/features/profile/profile-form";
+import { HeroScene } from "@/components/design/hero-scene";
 import { hasRecentReauthentication } from "@/lib/security/reauth";
 import { createClient, getUser } from "@/lib/supabase/server";
-import "./account-page.css";
+import { MotionSurface } from "@/components/design/motion-surface";
 
 export default async function AccountPage({
   searchParams,
@@ -159,7 +160,14 @@ export default async function AccountPage({
   return (
     <main className="account-main">
       <div className="account-wrapper">
-        <section aria-labelledby="account-title" className="account-header">
+        <section
+          aria-labelledby="account-title"
+          className="account-header"
+          data-reveal
+        >
+          <div aria-hidden="true" className="account-header__scene">
+            <HeroScene />
+          </div>
           <div className="account-header__identity">
             <div className="account-header__avatar">
               {profile.avatar_url ? (
@@ -184,57 +192,81 @@ export default async function AccountPage({
               </p>
             </div>
           </div>
-          <nav aria-label="Raccourcis du compte" className="quick-actions">
-            <Link className="quick-action" href="/account/bookings">
-              <span aria-hidden="true" className="quick-action__icon">
-                ◷
-              </span>
-              <span className="quick-action__copy">
-                <strong>Mes rendez-vous</strong>
-                <small>Retrouver tes réservations</small>
-              </span>
-            </Link>
-            <Link className="quick-action" href="/shops">
-              <span aria-hidden="true" className="quick-action__icon">
-                ↗
-              </span>
-              <span className="quick-action__copy">
-                <strong>Découvrir les boutiques</strong>
-                <small>Parcourir l’annuaire</small>
-              </span>
-            </Link>
+          <nav
+            aria-label="Raccourcis du compte"
+            className="quick-actions"
+            data-stagger="account-actions"
+            data-stagger-target=".quick-action"
+          >
+            <MotionSurface className="quick-action-motion">
+              <Link className="quick-action" href="/account/bookings">
+                <span aria-hidden="true" className="quick-action__icon">
+                  ◷
+                </span>
+                <span className="quick-action__copy">
+                  <strong>Mes rendez-vous</strong>
+                  <small>Retrouver tes réservations</small>
+                </span>
+              </Link>
+            </MotionSurface>
+            <MotionSurface className="quick-action-motion">
+              <Link className="quick-action" href="/shops">
+                <span aria-hidden="true" className="quick-action__icon">
+                  ↗
+                </span>
+                <span className="quick-action__copy">
+                  <strong>Découvrir les boutiques</strong>
+                  <small>Parcourir l’annuaire</small>
+                </span>
+              </Link>
+            </MotionSurface>
           </nav>
         </section>
 
-        <section aria-label="Résumé du compte" className="account-stats">
-          <article className="stat-card">
-            <span aria-hidden="true" className="stat-card__icon">
-              01
-            </span>
-            <p className="stat-card__value">{totalOrders}</p>
-            <p className="stat-card__label">
-              Commande{totalOrders > 1 ? "s" : ""}
-            </p>
-          </article>
-          <article className="stat-card">
-            <span aria-hidden="true" className="stat-card__icon">
-              02
-            </span>
-            <p className="stat-card__value">{completedOrders.length}</p>
-            <p className="stat-card__label">Terminées sur cette page</p>
-          </article>
-          <article className="stat-card">
-            <span aria-hidden="true" className="stat-card__icon">
-              FCFA
-            </span>
-            <p className="stat-card__value">
-              {totalSpent.toLocaleString("fr-FR")}
-            </p>
-            <p className="stat-card__label">Dépensé sur cette page</p>
-          </article>
+        <section
+          aria-label="Résumé du compte"
+          className="account-stats"
+          data-stagger="account-stats"
+          data-stagger-target=".stat-card"
+        >
+          <MotionSurface className="account-stat-motion">
+            <article className="stat-card">
+              <span aria-hidden="true" className="stat-card__icon">
+                01
+              </span>
+              <p className="stat-card__value">{totalOrders}</p>
+              <p className="stat-card__label">
+                Commande{totalOrders > 1 ? "s" : ""}
+              </p>
+            </article>
+          </MotionSurface>
+          <MotionSurface className="account-stat-motion">
+            <article className="stat-card">
+              <span aria-hidden="true" className="stat-card__icon">
+                02
+              </span>
+              <p className="stat-card__value">{completedOrders.length}</p>
+              <p className="stat-card__label">Terminées sur cette page</p>
+            </article>
+          </MotionSurface>
+          <MotionSurface className="account-stat-motion">
+            <article className="stat-card">
+              <span aria-hidden="true" className="stat-card__icon">
+                FCFA
+              </span>
+              <p className="stat-card__value">
+                {totalSpent.toLocaleString("fr-FR")}
+              </p>
+              <p className="stat-card__label">Dépensé sur cette page</p>
+            </article>
+          </MotionSurface>
         </section>
 
-        <section aria-label="Mes commandes" className="account-section">
+        <section
+          aria-label="Mes commandes"
+          className="account-section"
+          data-reveal
+        >
           <CustomerOrders
             currentPage={currentPage}
             orders={orders}
@@ -244,13 +276,18 @@ export default async function AccountPage({
           />
         </section>
 
-        <section aria-label="Mes notifications" className="account-section">
+        <section
+          aria-label="Mes notifications"
+          className="account-section"
+          data-reveal
+        >
           <NotificationCenter userId={user.id} />
         </section>
 
         <section
           aria-labelledby="account-profile-title"
           className="account-section account-profile-section"
+          data-reveal
         >
           <div className="account-section__heading">
             <div>
@@ -262,17 +299,19 @@ export default async function AccountPage({
               rendez-vous.
             </p>
           </div>
-          <div className="account-profile-card">
-            <ProfileForm
-              avatarUrl={profile.avatar_url}
-              fullName={profile.full_name ?? ""}
-              phone={profile.phone ?? ""}
-              reauthVerified={reauthVerified}
-            />
-          </div>
+          <MotionSurface className="account-profile-motion">
+            <div className="account-profile-card">
+              <ProfileForm
+                avatarUrl={profile.avatar_url}
+                fullName={profile.full_name ?? ""}
+                phone={profile.phone ?? ""}
+                reauthVerified={reauthVerified}
+              />
+            </div>
+          </MotionSurface>
         </section>
 
-        <footer className="account-footer">
+        <footer className="account-footer" data-reveal>
           <p>Ton compte Faso Studio</p>
           <SignOutButton />
         </footer>

@@ -14,14 +14,20 @@ export function AuthLayout({
   className?: string;
 }) {
   return (
-    <main className={`auth-main auth-main--split ${className ?? ""}`}>
+    <main
+      className={`auth-main auth-main--split ${className ?? ""}`}
+      data-motion-page
+    >
       <div className="auth-main__grid">
-        <div className="auth-main__visual">
+        <div className="auth-main__visual" data-reveal>
           {showLoginAside ? (
             <aside
               aria-label="À propos de Faso Studio"
               className="auth-login-aside"
             >
+              <div aria-hidden="true" className="auth-login-aside__scene">
+                <HeroScene />
+              </div>
               <Link
                 aria-label="Faso Studio, accueil"
                 className="auth-login-aside__brand"
@@ -92,7 +98,9 @@ export function AuthLayout({
             ))
           )}
         </div>
-        <div className="auth-main__form">{rightContent}</div>
+        <div className="auth-main__form" data-reveal>
+          {rightContent}
+        </div>
       </div>
     </main>
   );
