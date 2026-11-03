@@ -4,7 +4,6 @@ import { getSafeRedirectPath } from "@/lib/auth/redirect";
 import { AuthForm, type AuthMode } from "./auth-form";
 import { AuthLayout } from "@/components/design/auth-layout";
 import { BrandUtilityBar } from "@/components/design/brand-utility-bar";
-import { MarketingMotion } from "@/components/design/marketing-motion";
 
 export async function AuthPage({
   mode,
@@ -17,7 +16,7 @@ export async function AuthPage({
   const safeNext = getSafeRedirectPath(next);
 
   return (
-    <MarketingMotion>
+    <>
       <BrandUtilityBar />
       <AuthLayout
         {...(mode === "signup"
@@ -36,7 +35,7 @@ export async function AuthPage({
           />
         }
       />
-    </MarketingMotion>
+    </>
   );
 }
 
