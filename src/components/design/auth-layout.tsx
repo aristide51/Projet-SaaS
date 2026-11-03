@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { HeroScene } from "./hero-scene";
@@ -27,8 +28,15 @@ export function AuthLayout({
                 aria-label="À propos de Faso Studio"
                 className="auth-login-aside"
               >
-                <div aria-hidden="true" className="auth-login-aside__scene">
-                  <HeroScene />
+                <div className="auth-login-aside__photo">
+                  <Image
+                    alt="Commerçante burkinabè présentant son ordinateur portable."
+                    className="auth-login-aside__image"
+                    fill
+                    preload
+                    sizes="(max-width: 1023px) 100vw, 55vw"
+                    src="/images/hero-boutique.png"
+                  />
                 </div>
                 <Link
                   aria-label="Faso Studio, accueil"
@@ -41,24 +49,11 @@ export function AuthLayout({
                   <span>Faso Studio</span>
                 </Link>
                 <div className="auth-login-aside__content">
-                  <p className="auth-login-aside__eyebrow">
-                    <span aria-hidden="true" /> Le commerce local, connecté
-                  </p>
-                  <p className="auth-login-aside__title">
-                    Faites grandir votre commerce, simplement.
-                  </p>
-                  <p className="auth-login-aside__description">
-                    Votre boutique, vos commandes et vos rendez-vous, dans un
-                    espace pensé pour votre quotidien.
-                  </p>
                   <ul className="auth-login-aside__features">
                     <li>Votre boutique en ligne</li>
                     <li>Vos commandes et rendez-vous</li>
                   </ul>
                 </div>
-                <p className="auth-login-aside__footnote">
-                  Conçu au Burkina Faso, pour les commerces d’ici.
-                </p>
               </aside>
             ) : (
               (leftContent ?? (

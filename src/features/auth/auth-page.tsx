@@ -24,7 +24,9 @@ export async function AuthPage({
               className: "auth-main--signup",
               leftContent: <SignupAside />,
             }
-          : {})}
+          : mode === "login"
+            ? { className: "auth-main--login" }
+            : {})}
         showLoginAside={mode === "login"}
         rightContent={
           <AuthForm

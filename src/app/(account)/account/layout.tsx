@@ -17,7 +17,7 @@ export default async function AccountLayout({
         <BrandUtilityBar />
         <WorkspaceTopbar
           links={[
-            { href: "/account", label: "Mon profil" },
+            { href: "/account#account-profile", label: "Mon profil" },
             { href: "/account/bookings", label: "Mes rendez-vous" },
             { href: "/shops", label: "Annuaire" },
           ]}
