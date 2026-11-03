@@ -28,6 +28,7 @@ vi.mock("next/headers", () => ({
 }));
 
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
+import { validateServerEnv } from "@/lib/env";
 import {
   createClient as createServerClient,
   getOptionalUser,
@@ -52,6 +53,10 @@ describe("clients Supabase", () => {
         auth: expect.objectContaining({ persistSession: false }),
       }),
     );
+    expect(validateServerEnv).toHaveBeenCalledWith({
+      NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:55421",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "local-anon-key",
+    });
   });
 
   it("configure le client serveur avec les variables publiques et les cookies", async () => {

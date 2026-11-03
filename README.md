@@ -43,7 +43,9 @@ Les couleurs, l’espacement, les rayons, les ombres et le mouvement sont défin
 
 Les pages `/auth/signup`, `/auth/login`, `/auth/magic-link`, `/auth/forgot-password` et `/auth/reset-password` utilisent React Hook Form, Zod, des Server Actions et le client Supabase serveur. Les sessions restent dans des cookies `HttpOnly`; aucun jeton d’authentification n’est stocké dans `localStorage` ou `sessionStorage`. Les routes `/account`, `/dashboard` et `/admin` sont vérifiées dans le proxy et dans leurs layouts serveur. L’adresse e-mail doit être confirmée, et l’administration exige le rôle global correspondant en base.
 
-Configure `NEXT_PUBLIC_TURNSTILE_SITE_KEY` et `TURNSTILE_SECRET_KEY` dans `.env.local`, puis active Google OAuth dans Supabase pour utiliser les parcours correspondants. Le développement local exige la confirmation d’e-mail ; les messages de test sont consultables dans Inbucket sur `http://127.0.0.1:55424`. Les clés Turnstile de test Playwright sont réservées à l’environnement des tests.
+Configure `NEXT_PUBLIC_TURNSTILE_SITE_KEY` et `TURNSTILE_SECRET_KEY` dans `.env.local`, puis active Google OAuth dans Supabase pour utiliser les parcours correspondants. Google OAuth n’est pas activé par défaut dans la configuration locale : il faut créer un client OAuth Google et renseigner ses identifiants dans la configuration Supabase sans les committer.
+
+Le développement local exige la confirmation d’e-mail. Supabase local ne livre pas ces messages à Gmail : ouvre Mailpit sur `http://127.0.0.1:55424` pour consulter les e-mails de test. L’application utilise `http://localhost:3000` ; cette adresse et son callback sont autorisés dans `supabase/config.toml`. Redémarre Supabase (`pnpm db:stop`, puis `pnpm db:start`) après une modification de cette configuration. Les clés Turnstile de test Playwright sont réservées à l’environnement des tests.
 
 ## Vérifications
 

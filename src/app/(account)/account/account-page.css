@@ -1,0 +1,322 @@
+.account-main {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 12% 0%, rgb(8 120 47 / 7%), transparent 34rem),
+    var(--color-canvas);
+}
+
+.account-wrapper {
+  display: flex;
+  width: min(100% - 2rem, 76rem);
+  flex-direction: column;
+  gap: 1.5rem;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 3vw, 2.5rem) 0 3rem;
+}
+
+.account-header,
+.account-profile-card,
+.account-stats .stat-card,
+.account-section > .customer-orders {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.account-header {
+  display: grid;
+  gap: 1.5rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.account-header__identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.account-header__avatar {
+  display: grid;
+  width: 4.5rem;
+  height: 4.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.account-header__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.account-header__info {
+  min-width: 0;
+}
+
+.account-header__eyebrow,
+.account-section__eyebrow {
+  margin: 0 0 0.4rem;
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.account-header h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.account-header__subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+
+.quick-actions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.quick-action {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.quick-action:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-raised);
+}
+
+.quick-action:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.quick-action__icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 1.2rem;
+}
+
+.quick-action__copy {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.quick-action__copy strong {
+  font-size: 0.9rem;
+}
+
+.quick-action__copy small {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.account-stats {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.account-stats .stat-card {
+  min-width: 0;
+  padding: 1.15rem;
+}
+
+.stat-card__icon {
+  display: inline-flex;
+  min-width: 2.4rem;
+  min-height: 2.4rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.stat-card__value {
+  margin: 0.75rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.stat-card__label {
+  margin: 0.35rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.account-section {
+  min-width: 0;
+}
+
+.account-section > .customer-orders {
+  padding: clamp(1rem, 2.5vw, 1.75rem);
+}
+
+.account-section > .customer-orders > div:first-child {
+  margin-bottom: 1.25rem;
+}
+
+.account-section__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.account-section__heading h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+  line-height: 1.35;
+}
+
+.account-section__description {
+  max-width: 38rem;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.account-profile-card {
+  padding: clamp(1rem, 2.5vw, 1.75rem);
+}
+
+.account-profile-card .auth-form {
+  max-width: 42rem;
+}
+
+.account-profile-card .profile-delete {
+  max-width: 42rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.account-profile-card .profile-delete h2 {
+  font-size: 1.05rem;
+}
+
+.account-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+.account-footer > p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
+.account-main .customer-orders__list {
+  gap: 1rem;
+}
+
+.account-main .customer-order {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.account-main .customer-order__header {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.account-main .customer-order__items li {
+  gap: 0.75rem;
+}
+
+.account-main .customer-order__pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 42rem) {
+  .account-wrapper {
+    gap: 1.75rem;
+  }
+
+  .account-header {
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 0.75fr);
+    align-items: center;
+  }
+
+  .quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .account-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .account-section__heading {
+    flex-direction: row;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+
+  .account-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-action {
+    transition: none;
+  }
+
+  .quick-action:hover {
+    transform: none;
+  }
+}

@@ -13,7 +13,10 @@ export function createClient() {
   }
 
   const { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } =
-    validateServerEnv();
+    validateServerEnv({
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    });
 
   browserClient = createBrowserClient<Database>(
     NEXT_PUBLIC_SUPABASE_URL,
