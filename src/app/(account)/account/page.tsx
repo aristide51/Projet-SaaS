@@ -285,6 +285,7 @@ export default async function AccountPage({
         </section>
 
         <section
+          id="account-profile"
           aria-labelledby="account-profile-title"
           className="account-section account-profile-section"
           data-reveal

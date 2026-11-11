@@ -106,6 +106,27 @@ test("inscription confirmée, connexion et absence de jeton dans le stockage nav
   await page.getByLabel("Mot de passe").fill(password);
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page).toHaveURL(/\/account$/, { timeout: 15_000 });
+
+  await page.getByRole("link", { name: "Mon profil" }).click();
+  await expect(page).toHaveURL(/\/account#account-profile$/);
+  await expect(
+    page.getByRole("heading", { name: "Profil et sécurité" }),
+  ).toBeInViewport();
+
+  await page.getByRole("link", { name: "Mes rendez-vous" }).click();
+  await expect(page).toHaveURL(/\/account\/bookings$/);
+  await expect(
+    page.getByRole("heading", { name: "Mes rendez-vous" }),
+  ).toBeVisible();
+
+  await page.goto("/account");
+  await page.getByRole("link", { name: "Annuaire" }).click();
+  await expect(page).toHaveURL(/\/shops$/);
+  await expect(
+    page.getByRole("heading", {
+      name: "Trouve une boutique près de chez toi.",
+    }),
+  ).toBeVisible();
 });
 
 test("un lien magique mocké connecte un compte existant", async ({
@@ -371,7 +392,9 @@ test("un visiteur sans session est redirigé hors du tableau de bord", async ({
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/auth\/login\?next=%2Fdashboard/);
   await expect(
-    page.getByRole("heading", { name: "Content de te revoir" }),
+    page.getByText(
+      "Connecte-toi pour retrouver tes boutiques et tes commandes.",
+    ),
   ).toBeVisible();
 });
 

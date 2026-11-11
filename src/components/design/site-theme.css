@@ -1,0 +1,453 @@
+/* ==========================================================================
+   Thème partagé : reprend les polices, couleurs, boutons et cartes de la
+   page d'accueil pour toutes les autres pages (connexion, compte, tableau
+   de bord, administration).
+   ========================================================================== */
+
+.site-theme {
+  --marketing-forest: #087a3a;
+  --marketing-forest-dark: #033b20;
+  --marketing-red: #e10b18;
+  --marketing-red-dark: #bd0914;
+  --marketing-yellow: #ffe500;
+  --marketing-paper: #f5f6f1;
+  --marketing-ink: #17211c;
+  --marketing-muted: #637168;
+  --marketing-line: #e3e8e1;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  background:
+    radial-gradient(ellipse at 88% 0%, rgb(8 122 58 / 7%), transparent 45%),
+    radial-gradient(ellipse at 0% 100%, rgb(225 11 24 / 5%), transparent 40%),
+    var(--marketing-paper);
+  color: var(--marketing-ink);
+  font-family: var(--font-body);
+}
+
+.site-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.site-ambient canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.site-theme__content {
+  position: relative;
+  z-index: 1;
+}
+
+.site-theme :is(button, input, select, textarea) {
+  font-family: inherit;
+}
+
+.site-theme :is(h1, h2, h3) {
+  color: var(--marketing-forest-dark);
+  font-family: var(--font-display);
+  letter-spacing: -0.045em;
+}
+
+.site-theme h1 {
+  font-weight: 900;
+  line-height: 1.02;
+  text-transform: uppercase;
+}
+
+.site-theme h2 {
+  font-weight: 850;
+  line-height: 1.1;
+}
+
+.site-theme h3 {
+  font-weight: 800;
+}
+
+.site-theme :is(a, button, summary, input, select, textarea):focus-visible {
+  outline: 3px solid var(--marketing-yellow);
+  outline-offset: 3px;
+}
+
+/* Les fonds opaques masqueraient la scène 3D */
+.site-theme :is(.workspace-layout, .auth-main, .account-main) {
+  background: transparent;
+}
+
+/* Petits titres (style « kicker » de l'accueil) ------------------------- */
+.site-theme
+  :is(
+    .auth-eyebrow,
+    .account-header__eyebrow,
+    .account-section__eyebrow,
+    .auth-main__eyebrow,
+    .auth-login-aside__eyebrow
+  ) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: fit-content;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--marketing-red);
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.site-theme
+  :is(
+    .auth-eyebrow,
+    .account-header__eyebrow,
+    .account-section__eyebrow,
+    .auth-main__eyebrow
+  )::before {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--marketing-red);
+  content: "";
+}
+
+/* Boutons --------------------------------------------------------------- */
+.site-theme .ui-button {
+  border-radius: 0.6rem;
+  font-weight: 750;
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.site-theme .ui-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.site-theme .ui-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.site-theme .ui-button--primary {
+  border: 1px solid var(--marketing-red);
+  background: var(--marketing-red);
+  color: #fff;
+  box-shadow: 0 0.55rem 1.3rem rgb(225 11 24 / 18%);
+}
+
+.site-theme .ui-button--primary:hover:not(:disabled) {
+  border-color: var(--marketing-red-dark);
+  background: var(--marketing-red-dark);
+  color: #fff;
+  box-shadow: 0 0.8rem 1.8rem rgb(225 11 24 / 24%);
+}
+
+.site-theme .ui-button--secondary {
+  border: 1px solid #cbd6cf;
+  background: #fff;
+  color: var(--marketing-forest-dark);
+}
+
+.site-theme .ui-button--secondary:hover:not(:disabled) {
+  border-color: var(--marketing-forest);
+  background: #fff;
+  color: var(--marketing-forest);
+  box-shadow: 0 0.7rem 1.6rem rgb(3 59 32 / 10%);
+}
+
+.site-theme .ui-button--ghost {
+  color: var(--marketing-forest-dark);
+}
+
+.site-theme .ui-button--ghost:hover:not(:disabled) {
+  background: #eef2ec;
+  color: var(--marketing-forest);
+}
+
+/* Champs ---------------------------------------------------------------- */
+.site-theme .ui-input {
+  border-color: #dce5dc;
+  border-radius: 0.65rem;
+  background: #fff;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.site-theme .ui-input:hover:not(:disabled) {
+  border-color: #b9c9bd;
+}
+
+.site-theme .ui-input:focus-visible {
+  border-color: var(--marketing-forest);
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(8 122 58 / 14%);
+}
+
+.site-theme .ui-label {
+  color: #293a30;
+  font-weight: 700;
+}
+
+/* Cartes (style « benefit-card » de l'accueil) -------------------------- */
+.site-theme
+  :is(
+    .ui-card,
+    .stat-card,
+    .quick-action,
+    .account-profile-card,
+    .auth-card,
+    .ui-empty-state
+  ) {
+  border: 1px solid var(--marketing-line);
+  border-top: 3px solid var(--marketing-red);
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 1rem 2.8rem rgb(20 42 27 / 5%);
+  transition:
+    transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.site-theme :is(.ui-card, .stat-card, .quick-action):hover,
+.site-theme :is(.ui-card, .stat-card, .quick-action):focus-within {
+  border-color: #cbd7ce;
+  border-top-color: var(--marketing-red);
+  box-shadow: 0 1.5rem 3.5rem rgb(20 42 27 / 11%);
+  transform: translateY(-0.35rem);
+}
+
+.site-theme :is(.stat-card, .quick-action):nth-child(2),
+.site-theme :is(.stat-card, .quick-action):nth-child(2):hover {
+  border-top-color: var(--marketing-forest);
+}
+
+.site-theme .stat-card:nth-child(3),
+.site-theme .stat-card:nth-child(3):hover {
+  border-top-color: var(--marketing-yellow);
+}
+
+.site-theme .auth-card {
+  box-shadow: 0 1.5rem 4rem rgb(18 61 42 / 9%);
+}
+
+.site-theme .stat-card__icon {
+  color: var(--marketing-red);
+  font-family: var(--font-display);
+  font-weight: 900;
+}
+
+.site-theme .stat-card:nth-child(2) .stat-card__icon {
+  color: var(--marketing-forest);
+}
+
+.site-theme .stat-card:nth-child(3) .stat-card__icon {
+  color: #817600;
+}
+
+.site-theme .stat-card__value {
+  color: var(--marketing-forest-dark);
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+}
+
+.site-theme .stat-card__label,
+.site-theme
+  :is(
+    .auth-description,
+    .account-section__description,
+    .account-header__subtitle
+  ) {
+  color: var(--marketing-muted);
+}
+
+/* Liens ----------------------------------------------------------------- */
+.site-theme :is(.auth-links a, .auth-link, .auth-form__forgot-link) {
+  color: var(--marketing-forest);
+  font-weight: 750;
+  text-decoration: none;
+  background-image: linear-gradient(90deg, var(--marketing-red), #f7c100);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0% 2px;
+  transition:
+    color 180ms ease,
+    background-size 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.site-theme
+  :is(.auth-links a, .auth-link, .auth-form__forgot-link):is(
+    :hover,
+    :focus-visible
+  ) {
+  color: var(--marketing-red);
+  text-decoration: none;
+  background-size: 100% 2px;
+}
+
+/* Barre de navigation (style en-tête de l'accueil) ---------------------- */
+.site-theme .workspace-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-top: 3px solid var(--marketing-red);
+  border-bottom: 1px solid rgb(20 34 26 / 8%);
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 0.4rem 1.5rem rgb(10 27 17 / 5%);
+  backdrop-filter: blur(16px);
+}
+
+.site-theme .workspace-topbar__brand strong {
+  color: var(--marketing-forest-dark);
+  font-family: var(--font-display);
+  font-weight: 850;
+  letter-spacing: -0.035em;
+}
+
+.site-theme .workspace-topbar__mark,
+.site-theme
+  :is(.auth-brand__mark, .auth-login-aside__mark, .auth-main__brand-mark),
+.site-theme .account-header__avatar {
+  border-radius: 0.45rem;
+  background: var(--marketing-forest);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 900;
+}
+
+.site-theme .workspace-topbar__nav a {
+  position: relative;
+  border-radius: 0.5rem;
+  color: #39483f;
+  font-weight: 650;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.site-theme .workspace-topbar__nav a::after {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.25rem;
+  left: 0.75rem;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--marketing-red), #f7c100);
+  content: "";
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.site-theme
+  .workspace-topbar__nav
+  a:is(:hover, :focus-visible, [aria-current="page"]) {
+  background-color: #f6f5f0;
+  color: #0b1712;
+  transform: translateY(-1px);
+}
+
+.site-theme
+  .workspace-topbar__nav
+  a:is(:hover, :focus-visible, [aria-current="page"])::after {
+  transform: scaleX(1);
+}
+
+/* Panneau de gauche des pages de connexion ------------------------------ */
+.site-theme .auth-login-aside {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 85% 10%, rgb(255 229 0 / 18%), transparent 35%),
+    radial-gradient(circle at 10% 95%, rgb(225 11 24 / 30%), transparent 40%),
+    linear-gradient(
+      150deg,
+      var(--marketing-forest) 0%,
+      var(--marketing-forest-dark) 75%
+    );
+  color: #fff;
+}
+
+.site-theme
+  .auth-login-aside
+  :is(.auth-login-aside__brand, .auth-login-aside__title) {
+  color: #fff;
+  font-family: var(--font-display);
+}
+
+.site-theme .auth-login-aside__title {
+  font-weight: 900;
+  letter-spacing: -0.055em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.site-theme .auth-login-aside__eyebrow {
+  color: var(--marketing-yellow);
+}
+
+.site-theme .auth-login-aside__eyebrow span {
+  background: var(--marketing-yellow);
+}
+
+.site-theme .auth-login-aside__description,
+.site-theme .auth-login-aside__footnote {
+  color: rgb(255 255 255 / 78%);
+}
+
+.site-theme .auth-login-aside__mark {
+  background: var(--marketing-red);
+}
+
+.site-theme .auth-login-aside__features li {
+  border: 1px solid rgb(255 255 255 / 22%);
+  background: rgb(255 255 255 / 10%);
+  color: #fff;
+}
+
+.site-theme .auth-main__title,
+.site-theme .auth-main__stat-value {
+  color: var(--marketing-forest-dark);
+  font-family: var(--font-display);
+  font-weight: 900;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-theme
+    :is(
+      .ui-button,
+      .ui-card,
+      .stat-card,
+      .quick-action,
+      .workspace-topbar__nav a
+    ),
+  .site-theme
+    :is(
+      .ui-button,
+      .ui-card,
+      .stat-card,
+      .quick-action,
+      .workspace-topbar__nav a
+    ):hover {
+    transform: none;
+    transition-duration: 1ms;
+  }
+
+  .site-theme .workspace-topbar__nav a::after {
+    transition: none;
+  }
+}

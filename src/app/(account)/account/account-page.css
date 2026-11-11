@@ -307,6 +307,10 @@
   padding: clamp(1rem, 2.5vw, 1.75rem);
 }
 
+.account-profile-section {
+  scroll-margin-top: 6rem;
+}
+
 .account-profile-motion {
   width: 100%;
 }

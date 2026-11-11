@@ -25,7 +25,7 @@ export type AuthMode = "login" | "signup" | "magic" | "forgot" | "reset";
 
 const modeContent: Record<AuthMode, { title: string; description: string }> = {
   login: {
-    title: "Content de te revoir",
+    title: "",
     description: "Connecte-toi pour retrouver tes boutiques et tes commandes.",
   },
   signup: {
@@ -188,7 +188,8 @@ export function AuthForm({ mode, siteKey, nonce, next }: AuthFormProps) {
 
   return (
     <section
-      aria-labelledby="auth-title"
+      aria-label={content.title ? undefined : "Connexion"}
+      aria-labelledby={content.title ? "auth-title" : undefined}
       className={`auth-card auth-card--${mode}`}
       data-reveal
     >
@@ -213,7 +214,7 @@ export function AuthForm({ mode, siteKey, nonce, next }: AuthFormProps) {
             : undefined
         }
       >
-        <h1 id="auth-title">{content.title}</h1>
+        {content.title ? <h1 id="auth-title">{content.title}</h1> : null}
         <p className="auth-description">{content.description}</p>
       </div>
 

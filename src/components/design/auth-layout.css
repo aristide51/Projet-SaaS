@@ -3,6 +3,25 @@
   background: var(--color-canvas);
 }
 
+.auth-main--login.auth-main--split {
+  display: block;
+  padding: 0;
+}
+
+.auth-main--login.auth-main--split .auth-main__grid {
+  padding: clamp(1rem, 3vw, 2.5rem) 0 2rem;
+  gap: clamp(1.25rem, 3vw, 3rem);
+}
+
+.auth-main--login.auth-main--split .auth-main__visual {
+  min-height: 0;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
 .auth-main--split .auth-main__grid {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
@@ -283,5 +302,19 @@
 
   .auth-main--signup .auth-main__form {
     padding: 0;
+  }
+}
+
+@media (max-width: 1023px) {
+  .auth-main--login.auth-main--split .auth-main__grid {
+    padding: 1rem 0 1.5rem;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .auth-main--login.auth-main--split {
+    min-height: 0;
+    align-content: start;
   }
 }
