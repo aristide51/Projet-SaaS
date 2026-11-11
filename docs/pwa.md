@@ -8,12 +8,13 @@ indépendante de l’adaptateur : Next.js 16.4 sert le fichier statique `public/
 et OpenNext indique prendre en charge les versions mineures et correctives de
 Next.js 16 ainsi que les assets statiques Cloudflare.
 
-Au moment de l’implémentation, le dépôt ne contient pas `@opennextjs/cloudflare`
-ni de configuration `open-next.config.ts`/`wrangler.toml` ; le déploiement
-Cloudflare effectif reste donc à valider séparément. Serwist s’intègre par un
-plugin webpack et une compilation de service worker. Ce couplage n’est pas utile
-pour les quelques stratégies contrôlées ici et ajouterait une dépendance à
-vérifier avec l’adaptateur.
+Le déploiement Cloudflare Workers utilise `@opennextjs/cloudflare`. La
+configuration du Worker, du cache partagé et des étapes de prévisualisation est
+détaillée dans [`deploiement-cloudflare.md`](./deploiement-cloudflare.md) ;
+exécuter `pnpm cf:preview` avant chaque mise en production. Serwist s’intègre
+par un plugin webpack et une compilation de service worker. Ce couplage n’est
+pas utile pour les quelques stratégies contrôlées ici et ajouterait une
+dépendance à vérifier avec l’adaptateur.
 
 Références consultées :
 

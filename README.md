@@ -33,6 +33,15 @@ Les sessions d’authentification sont conservées dans des cookies `HttpOnly` e
 
 Les règles d’en-têtes HTTP, la vérification d’origine, Turnstile, Sentry et les règles WAF/rate limiting à configurer manuellement sur Cloudflare sont détaillés dans [`docs/securite.md`](./docs/securite.md). Configure `NEXT_PUBLIC_SENTRY_DSN` pour activer la remontée d’erreurs et `TURNSTILE_SECRET_KEY` pour permettre la vérification des jetons côté serveur. Ces deux intégrations sont optionnelles en développement ; une vérification Turnstile échoue explicitement si sa clé serveur manque.
 
+## Déploiement Cloudflare
+
+L’application utilise le runtime serveur de Cloudflare Workers via OpenNext ;
+elle ne se déploie pas comme un export statique Pages. Le mode de démarrage
+utilise le plan Workers Free sans stockage de cache payant. Consulte
+[`docs/deploiement-cloudflare.md`](./docs/deploiement-cloudflare.md) pour
+préparer l’environnement WSL, renseigner les variables de production,
+prévisualiser le Worker et le déployer avec `pnpm cf:preview` et `pnpm cf:deploy`.
+
 ## Système de design
 
 En développement (`pnpm dev`), ouvre `/design` pour consulter les jetons, composants et états interactifs. Cette route renvoie une page introuvable en production. Les polices Manrope et DM Sans sont auto-hébergées dans `src/app/fonts` avec leurs licences.
