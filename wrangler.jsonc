@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "saas-commerces-locaux",
   "workers_dev": true,
+  "keep_vars": true,
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-11-11",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
