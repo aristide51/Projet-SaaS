@@ -40,9 +40,16 @@ processus de build :
 - `NEXT_PUBLIC_SUPPORT_WHATSAPP` et `NEXT_PUBLIC_SUPPORT_EMAIL` si configurés
 
 Les variables `NEXT_PUBLIC_*` sont intégrées au build Next.js ; les configurer
-dans l’environnement de build Cloudflare, pas uniquement comme secrets runtime
-du Worker. Ajouter les secrets serveur dans les réglages Worker ou les saisir
-à l’invite Wrangler, sans les placer dans le dépôt :
+dans l’environnement de build Cloudflare. `NEXT_PUBLIC_SUPABASE_URL` et
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` doivent aussi être configurées comme variables
+du Worker : le proxy les relit à l’exécution pour initialiser Supabase. Dans
+Cloudflare, ouvrir **Workers & Pages → saas-commerces-locaux → Settings →
+Variables and Secrets**, puis les ajouter comme variables texte. La clé `anon`
+est publique ; ne jamais utiliser la clé `service_role`.
+
+Le fichier Wrangler conserve les variables ajoutées dans le dashboard lors des
+déploiements (`keep_vars`). Ajouter les secrets serveur dans les réglages Worker
+ou les saisir à l’invite Wrangler, sans les placer dans le dépôt :
 
 ```bash
 pnpm exec wrangler secret put REAUTH_COOKIE_SECRET
